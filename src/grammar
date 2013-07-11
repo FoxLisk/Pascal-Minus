@@ -1,0 +1,46 @@
+Program = "program" ProgramName ";" BlockBody "."
+BlockBody = [ConstantDefinitionPart] [TypeDefinitionPart] [VariableDefinitionPart] {ProcedureDefinition} CompoundStatement
+ConstantDefinitionPart = "const" ConstantDefinition {ConstantDefinition}
+ConstantDefinition = ConstantName "=" Constant ";"
+TypeDefinitionPart = "type" TypeDefinition {TypeDefinition}
+TypeDefinition = TypeName "=" NewType ";"
+NewType = NewArrayType | NewRecordType
+NewArrayType = "array" "[" IndexRange "]" "of" TypeName
+IndexRange = Constant ". ." Constant
+NewRecordType = "record" FieldList "end"
+FieldList = RecordSection {";" RecordSection}
+RecordSection = FieldName {"," FieldName} ":" TypeName
+VariableDefinitionPart = "var" VariableDefinition {VariableDefinition}
+VariableDefinition = VariableGroup ";"
+VariableGroup = VariableName {"," VariableName} ":" TypeName
+ProcedureDefinition = "procedure" ProcedureName ProcedureBlock ";"
+ProcedureBlock = ["(" FormalParameterList ")"] ";" BlockBody
+FormalParameterList = ParameterDefinition {";" ParameterDefinition}
+ParameterDefinition = ["var"] VariableGroup
+Statement = AssignmentStatement | ProcedureStatement | IfStatement | WhileStatement | CompoundStatement | Empty
+AssignmentStatement = VariableAccess ":=" Expression
+ProcedureStatement = ProcedureName ["(" ActualParameterList ")"]
+ActualParameterList = ActualParameter {"," ActualParameter}
+ActualParameter = Expression
+IfStatement = "if" Expression "then" Statement ["else" Statement]
+WhileStatement = "while" Expression "do" Statement
+CompoundStatement = "begin" Statement {";" Statement} "end"
+Expression = SimpleExpression [RelationalOperator SimpleExpression]
+RelationalOperator = "<" | "=" | ">" | "<=" | "<>" | ">="
+SimpleExpression = [SignOperator] Term {AddingOperator Term}
+SignOperator = "+" | "-"
+AddingOperator = "+" | "-" | "or"
+Term = Factor {MultiplyingOperator Factor}
+MultiplyingOperator: "*" | "div" | "mod" | "and"
+Factor = Constant | VariableAccess | "(" Expression ")" | "not" Factor
+VariableAccess = VariableName {Selector}
+Selector = IndexedSelector | FieldSelector
+IndexedSelector = "[" Expression "]"
+FieldSelector = "." FieldName
+Constant = Numeral | ConstantName
+Numeral = Digit {Digit}
+FieldName = Name
+ConstantName = Name
+VariableName = Name
+ProcedureName = Name
+Name = Letter {Letter | Digit}
