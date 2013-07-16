@@ -140,6 +140,7 @@ def scan_word():
   if is_name:
     #print 'is name: emitting %d, %d' % (symbols['name'], index)
     emit2(symbols['name'], index)
+    #emit2(symbols['name'], accum)
   else:
     #print 'is reserved word, emitting %d' % index
     emit1(index)
