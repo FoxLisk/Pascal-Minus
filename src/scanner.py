@@ -123,7 +123,7 @@ def next_symbol():
     scan_unknown()
 
 def scan_numeral():
-  acc = ch
+  acc = ''
   while ch in digits:
     acc += ch
     next_char()

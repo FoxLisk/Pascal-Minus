@@ -103,6 +103,14 @@ def get(t, name):
       return temp[t][name]
   return None
 
+def is_var(name):
+  f = get('var', name)
+  return f is not None
+
+def is_const(name):
+  f = get('const', name)
+  return f is not None
+
 def add_type(name, type):
   scope['type'][name] = type
 
@@ -463,10 +471,18 @@ def multiplying_operator():
     error('expected multiplying operator')
 
 def factor():
-  if current_symbol in first('Constant'):
-    constant()
-  elif current_symbol in first('VariableAccess'):
-    variable_access()
+  if check('name'):
+    factor_name = name()
+    if is_const(factor_name):
+      #we found our constant, we're good
+      return
+    elif is_var(factor_name):
+      error('Variable access is not implemented yet')
+      #we need to do ... most of a variable access
+    else:
+      error("Cannot find constant or variable named %s" % factor_name)
+  elif current_symbol in first('Numeral'):
+    numeral()
   elif check('('):
     expect('(')
     expression()
