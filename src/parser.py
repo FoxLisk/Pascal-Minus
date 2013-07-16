@@ -67,7 +67,7 @@ current_symbol = None
 #the standard types, Integer and Boolean, are 1 and 2
 #the standard values, False and True, are 3 and 4
 #the standard procs, Read and Write, are 5 and 6
-scope = {'var': {}, 'const': {3: Constant(3, 2, False), 4: Constant(4, 2, False)},  'proc': {5: None, 6: None}, 'type': {1: IntegerType(1), 2: BooleanType(2)}}
+scope = {'var': {}, 'const': {'False': Constant(3, 2, False), 'True': Constant(4, 2, False)},  'proc': {'Read': None, 'Write': None}, 'type': {'Integer': IntegerType(1), 'Boolean': BooleanType(2)}}
 
 parsed_so_far = []
 
@@ -121,13 +121,13 @@ def _next_symbol():
   f = open('temp1')
   all_symbols = f.read()
   f.close()
-  all_symbols = map(int, [s for s in all_symbols.split(' ') if s != ''])
+  all_symbols = [s for s in all_symbols.split(' ') if s != '']
   is_nl = False
   is_name = False
   is_int = False
   for s in all_symbols:
     if is_nl:
-      line_no = s
+      line_no = int(s)
       #print "found line #%d" % line_no
       is_nl = False
       continue
@@ -259,7 +259,7 @@ def variable_group():
   t = name()
   #print 'variable group: name returned type %d' % t
   if not get('type', t):
-    error("Trying to declare variables of undeclared type %d" % t)
+    error("Trying to declare variables of undeclared type %s" % t)
   map(lambda name: add_var(name, t), names)
   ret = []
   for n in names:
@@ -512,7 +512,7 @@ def constant():
     constant_name = name()
     constant = get('const', constant_name)
     if constant is None:
-      error('Failed to find constant in scope')
+      error('Failed to find constant %s in scope' % constant_name)
     return constant.type, constant.value
   else:
     error("Expecting a constant - either a Numeral or a named constant")

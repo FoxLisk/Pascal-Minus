@@ -139,8 +139,7 @@ def scan_word():
   is_name, index = search(accum)
   if is_name:
     #print 'is name: emitting %d, %d' % (symbols['name'], index)
-    emit2(symbols['name'], index)
-    #emit2(symbols['name'], accum)
+    emit2(symbols['name'], accum)
   else:
     #print 'is reserved word, emitting %d' % index
     emit1(index)
