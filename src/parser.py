@@ -9,6 +9,8 @@ boolean_type = 2
 class Type(object):
   def __init__(self, name):
     self.name = name
+    self.is_record = False
+    self.is_array = False
 
 class IntegerType(Type):
   def __init__(self, name):
@@ -30,6 +32,7 @@ class ArrayType(Type):
     self.type_of = type_of
     self.lower = lower
     self.upper = upper
+    self.is_array = True
 
 class RecordType(Type):
   def __init__(self, name, fields):
@@ -39,6 +42,7 @@ class RecordType(Type):
     '''
     super(RecordType, self).__init__(name)
     self.fields = fields
+    self.is_record = True
 
 class Constant:
   def __init__(self, name, type, value):
@@ -51,10 +55,16 @@ class Variable:
     self.name = name
     self.type = type
 
+class Parameter:
+  def __init__(self, name, type, is_var):
+    self.name = name
+    self.type = type
+    self.is_var = is_var
+
 class Proc:
   def __init__(self, name, params):
     '''
-    params should be a list of tuples of the form (name, type)
+    params should be a list of Parameter objects
     '''
     self.name = name
     self.params = params
@@ -67,13 +77,15 @@ current_symbol = None
 #the standard types, Integer and Boolean, are 1 and 2
 #the standard values, False and True, are 3 and 4
 #the standard procs, Read and Write, are 5 and 6
-scope = {'var': {}, 'const': {'False': Constant(3, 2, False), 'True': Constant(4, 2, False)},  'proc': {'Read': None, 'Write': None}, 'type': {'Integer': IntegerType(1), 'Boolean': BooleanType(2)}}
+scope = {'var': {}, 'const': {'False': Constant(3, 2, False), 'True': Constant(4, 2, False)},  'proc': {'Read': None, 'Write': None}, 'type': {'Integer': IntegerType('Integer'), 'Boolean': BooleanType('Boolean')}}
 
 parsed_so_far = []
 
 def error(msg):
   #print '  '.join(parsed_so_far)
-  raise Exception(msg + ' on line %d' % line_no)
+  error_msg = msg + ' on line %d' % line_no
+  #print error_msg
+  raise Exception(error_msg)
 
 def push_scope():
   #print 'push_scope'
@@ -112,15 +124,23 @@ def is_const(name):
   return f is not None
 
 def add_type(name, type):
+  if name in scope['type']:
+    error('Cannot redefine type %s' % name)
   scope['type'][name] = type
 
 def add_const(name, type, value):
+  if name in scope['const']:
+    error('Cannot redefine constant %s' % name)
   scope['const'][name] = Constant(name, type, value)
 
 def add_var(name, type):
+  if name in scope['var']:
+    error('Cannot redefine variable %s' % name)
   scope['var'][name] = Variable(name, type)
 
 def add_proc(name, params):
+  if name in scope['proc']:
+    error('Cannot redefine procedure %s' % name)
   scope['proc'][name] = Proc(name, params)
 
 def _next_symbol():
@@ -217,40 +237,51 @@ def block_body():
 def procedure_definition():
   expect('procedure')
   proc_name = name()
-  push_scope()
   procedure_block(proc_name)
   expect(';')
-  pop_scope()
 
 def procedure_block(proc_name):
   if check('('):
-    #print "running parameter list"
     expect('(')
     params = formal_parameter_list()
     expect(')')
-
   add_proc(proc_name, params)
+  push_scope()
+  for param in params:
+    add_var(param.name, param.type)
   expect(';')
   block_body()
+  pop_scope()
 
 def formal_parameter_list():
   params = parameter_definition()
   while check(';'):
     expect(';')
-    params.append([x for x in parameter_definition()])
+    map(lambda x: params.append(x), parameter_definition())
   return params
 
 def parameter_definition():
+  '''
+  returns list of Parameter objects
+  '''
+  is_var = False
   if check('var'):
     expect('var')
-  return variable_group()
+    is_var = True
+  vars = variable_group()
+  params = map(lambda v: Parameter(v[0], v[1], is_var), vars)
+  return params
 
 def variable_definition_part():
   #print 'variable_definition_part'
   expect('var')
-  variable_definition()
+  vars = variable_definition()
+  for v, t in vars:
+    add_var(v, t)
   while current_symbol in first('VariableDefinition'):
-    variable_definition()
+    vars = variable_definition()
+    for v, t in vars:
+      add_var(v, t)
 
 def variable_definition():
   vars = variable_group()
@@ -258,6 +289,9 @@ def variable_definition():
   return vars
 
 def variable_group():
+  '''
+  Returns list of tuples like [(name, type), (name, type)]
+  '''
   names = []
   names.append(name())
   while check(','):
@@ -268,7 +302,6 @@ def variable_group():
   #print 'variable group: name returned type %d' % t
   if not get('type', t):
     error("Trying to declare variables of undeclared type %s" % t)
-  map(lambda name: add_var(name, t), names)
   ret = []
   for n in names:
     ret.append((n, t))
@@ -295,7 +328,7 @@ def statement():
     else:
       #this is okay because, even though statements can be empty, a name cannot follow a statement
       #anywhere so if we find a name we dont need to backtrack - it's just game over
-      error('Found a name not associated with a var or proc in a statement')
+      error('Found name `%s` not associated with a var or proc in a statement' % name)
   elif check('if'):
     if_statement()
   elif check('while'):
@@ -309,37 +342,83 @@ def assignment_statement(name):
   #assignment or procedure statement
   #we now do something gross and mostly reproduce variable_access() here
   #because we have consumed name
-  if not get('var', name):
-    print 'Cannot assign to missing var'
-  while current_symbol in first('Selector'):
-    selector()
+  variable_access(name)
   expect(':=')
   expression()
+
+def variable_access(var_name):
+  #name has already been consumed
+  '''
+  returns type of variable being accessed
+  '''
+  var = get('var', var_name)
+  if var is None:
+    error('Cannot assign to missing var %s' % var_name)
+  type = get('type', var.type)
+  while current_symbol in first('Selector'):
+    type = selector(var.name, type)
+  return type
+
+def selector(var_name, type):
+  '''
+  var should be a Variable instance
+
+  returns type that was selected
+  '''
+  if check('['):
+    if not type.is_array:
+      error('Trying to use an indexed selector on non-array variable %s' % var_name)
+    expect('[')
+    expression()
+    expect(']')
+    return get('type', type.type_of)
+  elif check('.'):
+    if not type.is_record:
+      error('Trying to use a field selector on non-record variable %s' % var_name)
+    expect('.')
+    field_name = name()
+    if not field_name in type.fields:
+      error('Trying to access missing field %s from type %s' % (field_name, type.name))
+    return get('type', type.fields[field_name])
+  else:
+    error('Expected selector')
 
 def procedure_statement(proc_name):
   #print 'procedure_statement'
   #name has already been consumed in figuring out whether we're in
   #assignment or procedure statement
-  if not get('proc', proc_name):
+  proc = get('proc', proc_name)
+  if proc is None:
     error('trying to call nonexistent procedure')
   if check('('):
     expect('(')
-    actual_parameter_list()
+    params = actual_parameter_list()
     expect(')')
+  if len(params) != len(proc.params):
+    error('`%s` takes %d parameters; %d given' % (proc_name, len(proc.params), len(params)))
+  for i in range(len(params)):
+    if params[i].name != proc.params[i].type: 
+      error('Parameter %d passed to `%s` is of type `%s`; expecting `%s`' % (i + 1, proc_name, params[i].name, proc.params[i].name))
 
 def actual_parameter_list():
-  actual_parameter()
+  '''
+  returns the list of parameter types
+  '''
+  params = [actual_parameter()]
   while check(','):
     expect(',')
-    actual_parameter()
+    params.append(actual_parameter())
+  return params
 
 def actual_parameter():
-  expression()
+  return expression()
 
 def if_statement():
   #print 'if_statement'
   expect('if')
-  expression()
+  type = expression()
+  if type.name != 'Boolean':
+    error('Condition of an if statement must return a Boolean')
   expect('then')
   statement()
   if check('else'):
@@ -349,7 +428,9 @@ def if_statement():
 def while_statement():
   #print 'while_statement'
   expect('while')
-  expression()
+  type = expression()
+  if type.name != 'Boolean':
+    error('Condition of an if statement must return a Boolean')
   expect('do')
   statement()
 
@@ -427,18 +508,42 @@ def record_section():
   return names, type_name
 
 def expression():
-  simple_expression()
+  '''
+  returns resulting type
+  '''
+  type = simple_expression()
   if current_symbol in first('RelationalOperator'):
+    op = current_symbol
     relational_operator()
-    simple_expression()
+    other_type = simple_expression()
+    if op in ['<', '<=', '>=']:
+      if type.name != 'Integer' or other_type.name != 'Integer':
+        error('Comparisons must be with Integer type variables')
+    else:
+      if type.name != other_type.name:
+        error('Equality checks must be between equivalent types')
+    type = get('type', 'Boolean')
+  return type
 
 def simple_expression():
   if current_symbol in first('SignOperator'):
     sign_operator()
-  term()
+  type = term()
   while current_symbol in first('AddingOperator'):
+    op = current_symbol
     adding_operator()
-    term()
+    other_type = term()
+    if op == 'or':
+      if type.name != 'Boolean' or other_type.name != 'Boolean':
+        error('Can only use `or` operator with Boolean types')
+      else:
+        type = get('type', 'Boolean')
+    else:
+      if type.name != 'Integer' or other_type.name != 'Integer':
+        error('Can only use adding `%s` operator with Integers; found %s and %s' % (op, type.name, other_type.name))
+      else:
+        type = get('type', 'Integer')
+  return type
 
 def relational_operator():
   if any(map(check, ['<', '=', '<=', '<>', '>='])):
@@ -459,10 +564,21 @@ def adding_operator():
     error('expected adding operator')
 
 def term():
-  factor()
+  '''
+  returns type of term
+  '''
+  type = factor()
   while current_symbol in first('MultiplyingOperator'):
+    op = current_symbol
     multiplying_operator()
-    factor()
+    other_type = factor()
+    if op == 'and':
+      if type.name != 'Boolean' or other_type.name != 'Boolean':
+        error('Can only use `and` on Boolean operands')
+    else:
+      if type.name != 'Integer' or other_type.name != 'Integer': 
+        error('Can only use `%s` on Integer operands' % op)
+  return type
 
 def multiplying_operator():
   if any(map(check, ['*', 'div', 'mod', 'and'])):
@@ -471,25 +587,32 @@ def multiplying_operator():
     error('expected multiplying operator')
 
 def factor():
+  '''
+  returns type of factor
+  '''
   if check('name'):
     factor_name = name()
     if is_const(factor_name):
+      c = get('const', factor_name)
       #we found our constant, we're good
-      return
+      return c.type
     elif is_var(factor_name):
-      error('Variable access is not implemented yet')
-      #we need to do ... most of a variable access
+      return variable_access(factor_name)
     else:
       error("Cannot find constant or variable named %s" % factor_name)
   elif current_symbol in first('Numeral'):
     numeral()
+    return get('type', 'Integer')
   elif check('('):
     expect('(')
-    expression()
+    type = expression()
     expect(')')
+    return type
   elif check('not'):
     expect('not')
-    factor()
+    return factor()
+  else:
+    error('Expected a constant, variable, parenthesized expression, or `not`; found %s' % current_symbol)
 
 def name():
   expect('name')
