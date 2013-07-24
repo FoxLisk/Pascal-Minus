@@ -1,5 +1,6 @@
 import sys
 from errors import Errors
+from bytecodes import reverse_bytecodes
 
 errors = False
 emitting = True
@@ -37,6 +38,20 @@ def read():
 def emit(val):
   if emitting:
     output_file.write(str(val) + " ")
+
+def emit_code_real(*args):
+  for arg in args:
+    output_file.write(str(arg) + " ") 
+
+def emit_code_debug(*args):
+  output_file.write(reverse_bytecodes[int(args[0])] + " ")
+  for arg in args[1:]:
+    output_file.write(str(arg) + " ")
+
+if 'debug' in sys.argv:
+  emit_code = emit_code_debug
+else:
+  emit_code = emit_code_real
 
 def re_run():
   reset('temp2')

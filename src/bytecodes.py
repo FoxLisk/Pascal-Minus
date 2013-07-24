@@ -68,3 +68,5 @@ reverse_bytecodes = {
   32: 'DEFADDR',
   33: 'DEFARG'
 }
+
+bytecodes = {y:x for x, y in reverse_bytecodes.items()}

@@ -1,7 +1,8 @@
 from errors import Errors
-from administration_functions import error
+from administration_functions import error, emit_code
 from symbols import symbols, reverse_symbols
 from first import first
+from bytecodes import Op
 
 integer_type = 1
 boolean_type = 2
@@ -12,13 +13,25 @@ class Type(object):
     self.is_record = False
     self.is_array = False
 
+  def length(self):
+    raise Exception("Length has not been implemented by this subclass of Type")
+
+  def __str__(self):
+    return self.name
+
 class IntegerType(Type):
   def __init__(self, name):
     super(IntegerType, self).__init__(name)
 
+  def length(self):
+    return 1
+
 class BooleanType(Type):
   def __init__(self, name):
     super(BooleanType, self).__init__(name)
+
+  def length(self):
+    return 1
 
 class ArrayType(Type):
   def __init__(self, name, type_of, lower, upper):
@@ -34,6 +47,10 @@ class ArrayType(Type):
     self.upper = upper
     self.is_array = True
 
+  def length(self):
+    element_length = self.type_of.length()
+    return (self.upper - self.lower + 1) * element_length
+
 class RecordType(Type):
   def __init__(self, name, fields):
     '''
@@ -43,6 +60,20 @@ class RecordType(Type):
     super(RecordType, self).__init__(name)
     self.fields = fields
     self.is_record = True
+
+  def length(self):
+    return sum(map(lambda t: t.length(), self.fields.values()))
+
+  def field_displ(self, field_name):
+    '''
+    returns the displacement from this record to the start of field_name
+    '''
+    displ = 0
+    for name, type in self.fields.items():
+      if name == field_name:
+        return displ
+      else:
+        displ += type.length()
 
 class Constant:
   def __init__(self, name, type, value):
@@ -54,12 +85,29 @@ class Variable:
   def __init__(self, name, type):
     self.name = name
     self.type = type
+    self.displ = None
+    self.level = None
+    self.is_var_param = False
+
+  def length(self):
+    return self.type.length()
+
+  def __str__(self):
+    return '%s : %s' % (self.name, self.type.name)
 
 class Parameter:
   def __init__(self, name, type, is_var):
     self.name = name
     self.type = type
-    self.is_var = is_var
+    self.is_var_param = is_var
+    self.displ = None
+    self.level = None
+
+  def length(self):
+    return self.type.length()
+
+  #def __str__(self):
+    #return '%s : %s' % (self.name, self.type.name)
 
 class Proc:
   def __init__(self, name, params):
@@ -73,11 +121,10 @@ line_no = 0
 
 current_symbol = None
 
-
 #the standard types, Integer and Boolean, are 1 and 2
 #the standard values, False and True, are 3 and 4
 #the standard procs, Read and Write, are 5 and 6
-scope = {'var': {}, 'const': {'False': Constant(3, 2, False), 'True': Constant(4, 2, False)},  'proc': {'Read': None, 'Write': None}, 'type': {'Integer': IntegerType('Integer'), 'Boolean': BooleanType('Boolean')}}
+scope = {'var': {}, 'const': {'False': Constant(3, 2, False), 'True': Constant(4, 2, False)},  'proc': {}, 'type': {'Integer': IntegerType('Integer'), 'Boolean': BooleanType('Boolean')}}
 
 parsed_so_far = []
 
@@ -87,15 +134,21 @@ def error(msg):
   #print error_msg
   raise Exception(error_msg)
 
+block_level = 0
+
 def push_scope():
   #print 'push_scope'
-  global scope
+  global scope, block_level
   temp = scope
   scope = {'parent': temp, 'var': {}, 'const': {}, 'proc': {}, 'type': {}}
+  block_level += 1
 
 def pop_scope():
   #print 'pop_scope'
-  global scope
+  global scope, block_level
+  block_level -= 1
+  if block_level < 0:
+    error('Parser error: reached negative block level')
   scope = scope['parent']
 
 def get(t, name):
@@ -136,12 +189,17 @@ def add_const(name, type, value):
 def add_var(name, type):
   if name in scope['var']:
     error('Cannot redefine variable %s' % name)
-  scope['var'][name] = Variable(name, type)
+  var = Variable(name, type)
+  scope['var'][name] = var
+  return var
 
 def add_proc(name, params):
   if name in scope['proc']:
     error('Cannot redefine procedure %s' % name)
   scope['proc'][name] = Proc(name, params)
+
+add_proc('Write', [Parameter('x', get('type', 'Integer'), False)])
+add_proc('Read', [Parameter('x', get('type', 'Integer'), True)])
 
 def _next_symbol():
   #print '_next_symbol'
@@ -218,6 +276,7 @@ def program():
   expect(';')
   block_body()
   expect('.')
+  emit_code(Op.ENDPROG)
 
 def block_body():
   #print 'block_body'
@@ -258,8 +317,18 @@ def formal_parameter_list():
   while check(';'):
     expect(';')
     map(lambda x: params.append(x), parameter_definition())
+  parameter_addressing(params)
   return params
 
+def parameter_addressing(params):
+  global block_level
+  displ = 0
+  for param in reversed(params):
+    l = 1 if param.is_var_param else param.length()
+    displ -= l
+    param.displ = displ
+    param.level = block_level
+    
 def parameter_definition():
   '''
   returns list of Parameter objects
@@ -276,12 +345,24 @@ def variable_definition_part():
   #print 'variable_definition_part'
   expect('var')
   vars = variable_definition()
+  all_vars = []
   for v, t in vars:
-    add_var(v, t)
+    var = add_var(v, t)
+    all_vars.append(var)
   while current_symbol in first('VariableDefinition'):
     vars = variable_definition()
     for v, t in vars:
-      add_var(v, t)
+      var = add_var(v, t)
+      all_vars.append(var)
+  variable_addressing(all_vars)
+
+def variable_addressing(vars):
+  global block_level
+  displ = 3 #we start addressing variables after the static context, dynamic context, and return address
+  for var in vars:
+    var.displ = displ
+    var.level = block_level
+    displ += var.length()
 
 def variable_definition():
   vars = variable_group()
@@ -299,12 +380,13 @@ def variable_group():
     names.append(name())
   expect(':')
   t = name()
+  type = get('type', t)
   #print 'variable group: name returned type %d' % t
-  if not get('type', t):
+  if type is None:
     error("Trying to declare variables of undeclared type %s" % t)
   ret = []
   for n in names:
-    ret.append((n, t))
+    ret.append((n, type))
   return ret
   
 def compound_statement():
@@ -342,11 +424,13 @@ def assignment_statement(name):
   #assignment or procedure statement
   #we now do something gross and mostly reproduce variable_access() here
   #because we have consumed name
-  variable_access(name)
+  type = variable_access(name)
   expect(':=')
   expression()
+  emit_code(Op.ASSIGN, type.length())
 
 def variable_access(var_name):
+  global block_level
   #name has already been consumed
   '''
   returns type of variable being accessed
@@ -354,7 +438,11 @@ def variable_access(var_name):
   var = get('var', var_name)
   if var is None:
     error('Cannot assign to missing var %s' % var_name)
-  type = get('type', var.type)
+  level = block_level - var.level
+  op = Op.VARPARAM if var.is_var_param else Op.VARIABLE
+  emit_code(op, level, var.displ)
+  type = var.type
+
   while current_symbol in first('Selector'):
     type = selector(var.name, type)
   return type
@@ -371,7 +459,8 @@ def selector(var_name, type):
     expect('[')
     expression()
     expect(']')
-    return get('type', type.type_of)
+    emit_code(Op.INDEX, type.lower, type.upper, type.type_of.length(), line_no)
+    return type.type_of
   elif check('.'):
     if not type.is_record:
       error('Trying to use a field selector on non-record variable %s' % var_name)
@@ -379,6 +468,7 @@ def selector(var_name, type):
     field_name = name()
     if not field_name in type.fields:
       error('Trying to access missing field %s from type %s' % (field_name, type.name))
+    emit_code(Op.FIELD, type.field_displ(field_name))
     return get('type', type.fields[field_name])
   else:
     error('Expected selector')
@@ -397,8 +487,8 @@ def procedure_statement(proc_name):
   if len(params) != len(proc.params):
     error('`%s` takes %d parameters; %d given' % (proc_name, len(proc.params), len(params)))
   for i in range(len(params)):
-    if params[i].name != proc.params[i].type: 
-      error('Parameter %d passed to `%s` is of type `%s`; expecting `%s`' % (i + 1, proc_name, params[i].name, proc.params[i].name))
+    if params[i] != proc.params[i].type: 
+      error('Parameter %d passed to `%s` is of type `%s`; expecting `%s`' % (i + 1, proc_name, params[i], proc.params[i].type))
 
 def actual_parameter_list():
   '''
@@ -523,12 +613,31 @@ def expression():
       if type.name != other_type.name:
         error('Equality checks must be between equivalent types')
     type = get('type', 'Boolean')
+
+    if op == '<':
+      emit_code(Op.LESS)
+    elif op == '>':
+      emit_code(Op.GREATER)
+    elif op == '=':
+      emit_code(Op.EQUAL)
+    elif op == '<=':
+      emit_code(Op.NOTGREATER)
+    elif op == '>=':
+      emit_code(Op.NOTLESS)
+    elif op == '<>':
+      emit_code(Op.NOTEQUAL)
   return type
 
 def simple_expression():
+  sign = None
   if current_symbol in first('SignOperator'):
+    sign = current_symbol
     sign_operator()
   type = term()
+
+  if sign == '-':
+    emit_code(Op.MINUS)
+    
   while current_symbol in first('AddingOperator'):
     op = current_symbol
     adding_operator()
@@ -538,11 +647,16 @@ def simple_expression():
         error('Can only use `or` operator with Boolean types')
       else:
         type = get('type', 'Boolean')
+      emit_code(Op.OR)
     else:
       if type.name != 'Integer' or other_type.name != 'Integer':
         error('Can only use adding `%s` operator with Integers; found %s and %s' % (op, type.name, other_type.name))
       else:
         type = get('type', 'Integer')
+      if op == '+':
+        emit_code(Op.ADD)
+      elif op == '-':
+        emit_code(Op.SUBTRACT)
   return type
 
 def relational_operator():
@@ -575,9 +689,16 @@ def term():
     if op == 'and':
       if type.name != 'Boolean' or other_type.name != 'Boolean':
         error('Can only use `and` on Boolean operands')
+      emit_code(Op.AND)
     else:
       if type.name != 'Integer' or other_type.name != 'Integer': 
         error('Can only use `%s` on Integer operands' % op)
+      if op == '*':
+        emit_code(Op.MULTIPLY)
+      elif op == 'div':
+        emit_code(Op.DIVIDE)
+      elif op == 'mod':
+        emit_code(Op.MODULO)
   return type
 
 def multiplying_operator():
@@ -594,6 +715,7 @@ def factor():
     factor_name = name()
     if is_const(factor_name):
       c = get('const', factor_name)
+      emit_code(Op.CONSTANT, c.value)
       #we found our constant, we're good
       return c.type
     elif is_var(factor_name):
@@ -601,7 +723,8 @@ def factor():
     else:
       error("Cannot find constant or variable named %s" % factor_name)
   elif current_symbol in first('Numeral'):
-    numeral()
+    num = numeral()
+    emit_code(Op.CONSTANT, num)
     return get('type', 'Integer')
   elif check('('):
     expect('(')
@@ -610,7 +733,9 @@ def factor():
     return type
   elif check('not'):
     expect('not')
-    return factor()
+    fact = factor()
+    emit_code(Op.NOT)
+    return fact
   else:
     error('Expected a constant, variable, parenthesized expression, or `not`; found %s' % current_symbol)
 
@@ -623,17 +748,21 @@ def name():
 def numeral():
   #print 'numeral'
   expect('numeral')
-  return next_symbol()
+  num = current_symbol
+  next_symbol()
+  return int(num)
 
 def new_array_type(type_name):
   #print 'new_array_type'
   expect('array')
   expect('[')
   lower, upper = index_range()
+  #lower and upper are (type, val) tuples
   expect(']')
   expect('of')
-  type_of = name()
-  add_type(type_name, ArrayType(type_name, type_of, lower, upper))
+  type_of_name = name()
+  type_of = get('type', type_of_name)
+  add_type(type_name, ArrayType(type_name, type_of, lower[1], upper[1]))
 
 def index_range():
   #print 'index_range'
@@ -659,3 +788,8 @@ def constant():
 def pass2():
   next_symbol()
   program()
+  try:
+    pass
+  except Exception as e:
+    raise(e)
+    error(str(e))

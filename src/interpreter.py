@@ -1,4 +1,4 @@
-from bytecodes import Op, reverse_bytecodes
+from bytecodes import Op, reverse_bytecodes, bytecodes
 import sys
 
 _store = []
@@ -11,15 +11,18 @@ def get_code():
   returns a list of opcodes
   '''
 
-  '''
   fn = sys.argv[1]
   f = open(fn)
   code = f.read()
   f.close()
-  return code
-  or whatever
-  '''
-  return [Op.PROGRAM, 0, 3, Op.CONSTANT, 65, Op.WRITE, Op.ENDPROG]
+  codes = []
+  for c in code.strip().split(' '):
+    try:
+      codes.append(int(c))
+    except ValueError:
+      codes.append(c)
+  return  codes
+  #return [Op.PROGRAM, 0, 3, Op.CONSTANT, 65, Op.WRITE, Op.ENDPROG]
 
 def error(msg):
   raise Exception(msg)
@@ -33,6 +36,7 @@ def store(loc, val = None):
   if val is None:
     return _store[loc]
   else:
+    print 'setting store[%d] to %d' % (loc, val)
     _store[loc] = val
 
 def p(inc = None):
@@ -72,7 +76,8 @@ def variable(level, displ):
   while level > 0: #move through the static links as many levels as necessary to find the variable in the correct stack frame
     x = store(x)
     level -= 1
-  store(s, x + displ) #set the top of the stack to the address of the sought variable
+  print 'found variable at %d' % (x + displ,)
+  store(s(), x + displ) #set the top of the stack to the address of the sought variable
   p(3) #move program three blocks forward (variable instruction is VARIABLE, LEVEL, DISPL)
 
 def var_param(level, displ):
@@ -106,19 +111,21 @@ def field(displ):
   p(2)
 
 def constant(val):
+  #print 'Pushing constant %d' % val
   s(1)
   store(s(), val)
   p(2)
 
 def value(length):
   #TODO this is probably broken
-  i = store(s()) #the value in store(s()) is the address of the variable we want so i is now the actual variable
-  s(1)
+  i = store(s()) #the value in store(s()) is the address of the variable we want so i is now the location of the variable
+  #not moving s() because we just want to pop the address of the variable off and replace it with the value
   while length > 0: #so for each element in the var (possibly only the one) 
-    store(s(), i) #we copy the value at i into the store
+    store(s(), store(i)) #we copy the value at i into the store
     s(1) #move the stack pointer forward
     i += 1 #and move the pointer from the source var forward
     length -= 1
+  s(-1) #in the loop we moved one word past the end of the actual value
   p(2)
 
 def assign(length):
@@ -127,12 +134,18 @@ def assign(length):
   #so s() - length is the address of the variable we're copying into
   #and s() - length + 1 is the beginning of the values to copy
   val_addr = s() - length + 1
+  print 'store %d length %d val addr %d' % (s(), length, val_addr)
   var_addr = store(s() - length)
+  tmp = var_addr
+  log = 'Assigning '
   while length > 0: #so for each element in the var (possibly only the one) 
+    log += str(store(val_addr)) + ' '
     store(var_addr, store(val_addr))
     var_addr += 1
     val_addr += 1
     length -= 1
+  log += ' to ' + str(tmp)
+  print log
   p(2)
 
 def goto(displ):
@@ -183,9 +196,9 @@ def program(var_length, displ):
   p(displ)
 
 def write():
-  #print 'writing'
+  print 'writing'
   val = store(s())
-  #print 'val: %d chr: %s' % (val, chr(val))
+  print 'val: %d chr: %s' % (val, chr(val))
   sys.stdout.write(chr(val))
   s(-1)
   p(1)
@@ -206,6 +219,7 @@ def binary_op(operation):
   x = store(s())
   y = store(s() + 1)
   store(s(), operation(x, y))
+  print 'storing %d at top of stack' % operation(x, y)
   p(1)
 
 def add():
@@ -262,14 +276,21 @@ def minus():
 def setup():
   global _store
   _store = get_code()
+  print 'loaded %d words of program code' % len(_store)
   b(len(_store))
-  s(len(_store))
+  s(len(_store) + 3)
 
 def run():
   setup()
   while True:
-    op = store(p())
-    #print 'Handling operation %s' % reverse_bytecodes[op]
+    try:
+      op = int(store(p()))
+    except ValueError:
+      op = bytecodes[store(p())]
+    try:
+      print '-- %s' % reverse_bytecodes[op]
+    except ValueError:
+      print 'handling %s' % op
     if op == Op.ADD:
       add()
     elif op == Op.AND:

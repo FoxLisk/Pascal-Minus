@@ -2,6 +2,7 @@ from sets import Set
 from errors import Errors
 from administration_functions import eof, emit, read, new_line, error
 from symbols import symbols, reverse_symbols
+
 ETX = -1
 ch = None
 invisible = Set([chr(x) for x in range(0, 40) if chr(x) not in ' \n'])
