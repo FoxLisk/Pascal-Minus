@@ -4,8 +4,14 @@ from symbols import symbols, reverse_symbols
 from first import first
 from bytecodes import Op
 
-integer_type = 1
-boolean_type = 2
+block_level = 0
+label_no = 0
+
+def new_label():
+  global label_no
+  tmp = label_no
+  label_no += 1
+  return tmp
 
 class Type(object):
   def __init__(self, name):
@@ -106,19 +112,21 @@ class Parameter:
   def length(self):
     return self.type.length()
 
-  #def __str__(self):
-    #return '%s : %s' % (self.name, self.type.name)
+  def __str__(self):
+    return 'Parameter %s : %s | level %d | displ %d' % (self.name, self.type.name, self.level, self.displ)
 
 class Proc:
   def __init__(self, name, params):
+    global block_level
     '''
     params should be a list of Parameter objects
     '''
     self.name = name
     self.params = params
+    self.level = block_level
+    self.label = new_label()
 
 line_no = 0
-
 current_symbol = None
 
 #the standard types, Integer and Boolean, are 1 and 2
@@ -134,7 +142,6 @@ def error(msg):
   #print error_msg
   raise Exception(error_msg)
 
-block_level = 0
 
 def push_scope():
   #print 'push_scope'
@@ -197,6 +204,14 @@ def add_proc(name, params):
   if name in scope['proc']:
     error('Cannot redefine procedure %s' % name)
   scope['proc'][name] = Proc(name, params)
+
+def add_param(param):
+  '''
+  adds a parameter object as a variable for the current scope
+  '''
+  if param.name in scope['var']:
+    error('Cannot redefine variable %s' % name)
+  scope['var'][param.name] = param
 
 add_proc('Write', [Parameter('x', get('type', 'Integer'), False)])
 add_proc('Read', [Parameter('x', get('type', 'Integer'), True)])
@@ -272,25 +287,31 @@ def check(symbol):
 def program():
   #print 'program'
   expect('program')
+  var_label = new_label()
+  begin_label = new_label()
+  emit_code(Op.PROGRAM, var_label, begin_label)
   program_name = name()
   expect(';')
-  block_body()
+  block_body(var_label, begin_label)
   expect('.')
   emit_code(Op.ENDPROG)
 
-def block_body():
+def block_body(var_label, begin_label):
   #print 'block_body'
-  #print "in block body: current symbol: %s" % reverse_symbols[current_symbol]
-  #print first('ConstantDefinitionPart')
   if current_symbol in first('ConstantDefinitionPart'):
     #print "trying constant definition part"
     constant_definition_part()
   if current_symbol in first('TypeDefinitionPart'):
     type_definition_part()
   if current_symbol in first('VariableDefinitionPart'):
-    variable_definition_part()
+    vars = variable_definition_part()
+  else:
+    vars = []
   while current_symbol in first('ProcedureDefinition'):
     procedure_definition()
+  emit_code(Op.DEFADDR, begin_label)
+  var_length = sum(map(lambda var: var.length(), vars))
+  emit_code(Op.DEFARG, var_label, var_length)
   compound_statement()
 
 def procedure_definition():
@@ -307,9 +328,11 @@ def procedure_block(proc_name):
   add_proc(proc_name, params)
   push_scope()
   for param in params:
-    add_var(param.name, param.type)
+    add_param(param)
   expect(';')
-  block_body()
+  var_label = new_label()
+  begin_label = new_label()
+  block_body(var_label, begin_label)
   pop_scope()
 
 def formal_parameter_list():
@@ -342,6 +365,9 @@ def parameter_definition():
   return params
 
 def variable_definition_part():
+  '''
+  returns the variables defined
+  '''
   #print 'variable_definition_part'
   expect('var')
   vars = variable_definition()
@@ -355,6 +381,7 @@ def variable_definition_part():
       var = add_var(v, t)
       all_vars.append(var)
   variable_addressing(all_vars)
+  return all_vars
 
 def variable_addressing(vars):
   global block_level
@@ -501,7 +528,8 @@ def actual_parameter_list():
   return params
 
 def actual_parameter():
-  return expression()
+  type = expression()
+  return type
 
 def if_statement():
   #print 'if_statement'
@@ -606,6 +634,7 @@ def expression():
     op = current_symbol
     relational_operator()
     other_type = simple_expression()
+
     if op in ['<', '<=', '>=']:
       if type.name != 'Integer' or other_type.name != 'Integer':
         error('Comparisons must be with Integer type variables')
@@ -719,7 +748,11 @@ def factor():
       #we found our constant, we're good
       return c.type
     elif is_var(factor_name):
-      return variable_access(factor_name)
+      type = variable_access(factor_name)
+      #variable_access is used in both assignment and expressions, so if we're
+      #getting the value of a variable here factor has to emit the value part
+      emit_code(Op.VALUE, type.length())
+      return type
     else:
       error("Cannot find constant or variable named %s" % factor_name)
   elif current_symbol in first('Numeral'):
@@ -775,7 +808,7 @@ def constant():
   #print 'constant'
   if current_symbol in first('Numeral'):
     constant = numeral()
-    return get('type', integer_type), constant
+    return get('type', 'Integer'), constant
   elif current_symbol in first('Name'):
     constant_name = name()
     constant = get('const', constant_name)

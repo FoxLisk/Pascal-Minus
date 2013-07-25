@@ -1,3 +1,4 @@
+from administration_functions import get_code
 from bytecodes import Op, reverse_bytecodes, bytecodes
 import sys
 
@@ -5,24 +6,6 @@ _store = []
 _p = 0
 _b = 0
 _s = 0
-
-def get_code():
-  '''
-  returns a list of opcodes
-  '''
-
-  fn = sys.argv[1]
-  f = open(fn)
-  code = f.read()
-  f.close()
-  codes = []
-  for c in code.strip().split(' '):
-    try:
-      codes.append(int(c))
-    except ValueError:
-      codes.append(c)
-  return  codes
-  #return [Op.PROGRAM, 0, 3, Op.CONSTANT, 65, Op.WRITE, Op.ENDPROG]
 
 def error(msg):
   raise Exception(msg)
@@ -86,7 +69,7 @@ def var_param(level, displ):
   while level > 0: #move through the static links as many levels as necessary to find the variable in the correct stack frame
     x = store(x)
     level -= 1
-  var_loc = store(x + displ) #we need to grab the location of the variable that was passed in as a parameter TODO understand this
+  var_loc = store(x + displ) #we need to grab the location of the variable that was passed in as a parameter
   store(s(), var_loc)
   p(3) #move program three blocks forward (variable instruction is VARIABLE, LEVEL, DISPL)
 
@@ -134,7 +117,6 @@ def assign(length):
   #so s() - length is the address of the variable we're copying into
   #and s() - length + 1 is the beginning of the values to copy
   val_addr = s() - length + 1
-  print 'store %d length %d val addr %d' % (s(), length, val_addr)
   var_addr = store(s() - length)
   tmp = var_addr
   log = 'Assigning '
@@ -275,7 +257,7 @@ def minus():
 
 def setup():
   global _store
-  _store = get_code()
+  _store = get_code(sys.argv[1])
   print 'loaded %d words of program code' % len(_store)
   b(len(_store))
   s(len(_store) + 3)

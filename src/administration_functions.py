@@ -1,14 +1,29 @@
 import sys
 from errors import Errors
-from bytecodes import reverse_bytecodes
+from bytecodes import reverse_bytecodes, bytecodes
 
 errors = False
-emitting = True
 line_no = 0
 correct_line = True
 input_file = None
 output_file = None
 eof = False
+
+def get_code(filename):
+  '''
+  returns a list of opcodes
+  '''
+  f = open(filename)
+  code = f.read()
+  f.close()
+  codes = []
+  for c in code.strip().split(' '):
+    try:
+      codes.append(int(c))
+    except ValueError:
+      codes.append(bytecodes[c])
+  return  codes
+  #return [Op.PROGRAM, 0, 3, Op.CONSTANT, 65, Op.WRITE, Op.ENDPROG]
 
 def eof():
   return eof
@@ -36,8 +51,7 @@ def read():
   return this_char
 
 def emit(val):
-  if emitting:
-    output_file.write(str(val) + " ")
+  output_file.write(str(val) + " ")
 
 def emit_code_real(*args):
   for arg in args:
@@ -53,10 +67,6 @@ if 'debug' in sys.argv:
 else:
   emit_code = emit_code_real
 
-def re_run():
-  reset('temp2')
-  emitting = True
-
 def new_line(num):
   line_no = num
   correct_line = True
@@ -66,20 +76,12 @@ def close():
   input_file.close()
 
 def error(error):
-  global errors, emitting, correct_line
+  global errors, correct_line
   if not errors:
     close()
     rewrite('notes')
-    emitting = False
     errors = True
   if correct_line:
     print 'Line %d' % line_no
     print error
     correct_line = False
-
-def test_limit(length, maximum):
-  print 'Program Too Big'
-  exit()
-
-def delete(filename):
-  pass #who cares
