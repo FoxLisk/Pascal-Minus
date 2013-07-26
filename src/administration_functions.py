@@ -8,7 +8,11 @@ correct_line = True
 input_file = None
 output_file = None
 eof = False
-debug_mode = 'debug' in sys.argv
+debug_mode = False
+
+def set_debug(debug):
+  global debug_mode
+  debug_mode = debug
 
 def debug(msg):
   if debug_mode:
