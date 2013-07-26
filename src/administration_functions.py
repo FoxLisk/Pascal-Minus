@@ -76,8 +76,12 @@ def new_line(num):
   correct_line = True
 
 def close():
-  global input_file
-  input_file.close()
+  global input_file, output_file
+  if input_file is not None:
+    input_file.close()
+  if output_file is not None:
+    output_file.close()
+
 
 def error(error):
   global errors, correct_line

@@ -1,5 +1,5 @@
 from bytecodes import Op, reverse_bytecodes, bytecodes
-from administration_functions import get_code, emit_code
+from administration_functions import get_code, emit_code, debug
 import sys
 
 #map from codes to skip to the length (number of codes to skip when one is encountered)
@@ -80,13 +80,13 @@ def handle_pseudos():
     if op == Op.DEFADDR:
       label_no = tmp_code[i+1]
       tmp_labels[label_no] = address
-      print 'label %d: %d' % (label_no, address)
+      debug('label %d: %d' % (label_no, address))
       i += 2
     elif op == Op.DEFARG:
       label_no = tmp_code[i+1]
       value = tmp_code[i+2]
       tmp_labels[label_no] = value
-      print 'label %d: %d' % (label_no, value)
+      debug('label %d: %d' % (label_no, value))
       i += 3
     else:
       #if we're skipping it just emit all the codes until the next instruction

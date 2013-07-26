@@ -268,17 +268,17 @@ def log_not():
 def minus():
   unary_op(lambda x: -x)
 
-def setup():
+def setup(filename):
   global _store, code_length
-  _store = get_code(sys.argv[1])
+  _store = get_code(filename)
   debug('loaded %d words of program code' % len(_store))
   code_length = len(_store)
   b(code_length)
   s(code_length + 3)
   debug('setup done: b: %d s %d' % (b(), s()))
 
-def run():
-  setup()
+def interpret(filename):
+  setup(filename)
   while True:
     try:
       op = int(store(p()))
@@ -354,6 +354,5 @@ def run():
     else:
       error('Unexpected opcode %d' % op)
 
-      
 if __name__ == '__main__':
-  run()
+  interpret(sys.argv[1])
