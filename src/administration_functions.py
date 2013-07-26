@@ -10,6 +10,9 @@ output_file = None
 eof = False
 debug_mode = False
 
+class TestClass:
+  pass
+
 def set_debug(debug):
   global debug_mode
   debug_mode = debug
