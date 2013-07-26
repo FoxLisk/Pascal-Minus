@@ -1,4 +1,4 @@
-from administration_functions import get_code
+from administration_functions import get_code, debug
 from bytecodes import Op, reverse_bytecodes, bytecodes
 import sys
 
@@ -66,7 +66,7 @@ def variable(level, displ):
   while level > 0: #move through the static links as many levels as necessary to find the variable in the correct stack frame
     x = store(x)
     level -= 1
-  print 'storing var location of %d at top of stack %d' % (x + displ, s())
+  debug('storing var location of %d at top of stack %d' % (x + displ, s()))
   store(s(), x + displ) #set the top of the stack to the address of the sought variable
   p(3) #move program three blocks forward (variable instruction is VARIABLE, LEVEL, DISPL)
 
@@ -77,7 +77,7 @@ def var_param(level, displ):
     x = store(x)
     level -= 1
   var_loc = store(x + displ) #we need to grab the location of the variable that was passed in as a parameter
-  print 'found var param at %d' % var_loc
+  debug('found var param at %d' % var_loc)
   store(s(), var_loc)
   p(3) #move program three blocks forward (variable instruction is VARIABLE, LEVEL, DISPL)
 
@@ -136,7 +136,7 @@ def assign(length):
     val_addr += 1
     length -= 1
   log += 'to ' + str(tmp)
-  print log
+  debug(log)
   p(2)
 
 def goto(displ):
@@ -159,7 +159,7 @@ def proc_call(level, displ):
   level is the number of levels back in the static link to follow
   displ is the displacement from p to the end of the proc call instruction (taking into account all the parameter lengths, etc)
   '''
-  print 'proc call: moving down %d levels of static chain' % level
+  debug('proc call: moving down %d levels of static chain' % level)
   s(1)
   #trace static link back to the base
   static_link = b() 
@@ -187,13 +187,13 @@ def program(var_length, displ):
   str = 'program var length = %d s before = %d ' % (var_length, s())
   s(var_length - 1) #functions that need to a free stack space will push it forward themselves, so we can actually just move it forward to point at the last variable
   str += 's after = %d' % s()
-  print str
+  debug(str)
   p(displ)
 
 def write():
-  print 'writing'
+  debug('writing')
   val = store(s())
-  print 'val: %d chr: %s' % (val, chr(val))
+  debug('val: %d chr: %s' % (val, chr(val)))
   sys.stdout.write(chr(val))
   s(-1)
   p(1)
@@ -214,7 +214,7 @@ def binary_op(operation):
   x = store(s())
   y = store(s() + 1)
   store(s(), operation(x, y))
-  print 'storing %d at top of stack' % operation(x, y)
+  debug('storing %d at top of stack' % operation(x, y))
   p(1)
 
 def add():
@@ -271,11 +271,11 @@ def minus():
 def setup():
   global _store, code_length
   _store = get_code(sys.argv[1])
-  print 'loaded %d words of program code' % len(_store)
+  debug('loaded %d words of program code' % len(_store))
   code_length = len(_store)
   b(code_length)
   s(code_length + 3)
-  print 'setup done: b: %d s %d' % (b(), s())
+  debug('setup done: b: %d s %d' % (b(), s()))
 
 def run():
   setup()
@@ -285,9 +285,9 @@ def run():
     except ValueError:
       op = bytecodes[store(p())]
     try:
-      print '-- %s' % reverse_bytecodes[op]
+      debug('-- %s' % reverse_bytecodes[op])
     except KeyError:
-      print 'handling %s' % op
+      debug('handling %s' % op)
     if op == Op.ADD:
       add()
     elif op == Op.AND:

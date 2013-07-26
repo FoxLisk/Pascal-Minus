@@ -1,6 +1,6 @@
 import sys
 from scanner import pass1
-from administration_functions import reset, rewrite, read
+from administration_functions import reset, rewrite, read, debug
 from errors import Errors
 from parser import pass2
 from assembler import pass3

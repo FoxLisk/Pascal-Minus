@@ -525,7 +525,7 @@ def procedure_statement(proc_name):
     if params[i] != proc.params[i].type: 
       error('Parameter %d passed to `%s` is of type `%s`; expecting `%s`' % (i + 1, proc_name, params[i], proc.params[i].type))
   if proc.name == 'Write':
-    emit_code(Op.Write)
+    emit_code(Op.WRITE)
   elif proc.name == 'Read':
     error('Read not implemented')
   else:

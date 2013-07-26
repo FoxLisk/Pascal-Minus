@@ -8,6 +8,11 @@ correct_line = True
 input_file = None
 output_file = None
 eof = False
+debug_mode = 'debug' in sys.argv
+
+def debug(msg):
+  if debug_mode:
+    print msg
 
 def get_code(filename):
   '''
@@ -61,7 +66,7 @@ def emit_code_debug(*args):
   for arg in args[1:]:
     output_file.write(str(arg) + " ")
 
-if 'debug' in sys.argv:
+if debug_mode:
   emit_code = emit_code_debug
 else:
   emit_code = emit_code_real
