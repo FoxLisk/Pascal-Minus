@@ -8,6 +8,8 @@ _b = 0
 _s = 0
 code_length = 0
 
+out_stream = None
+
 def error(msg):
   print 'FATAL ERROR: STACK'
   print _store[code_length:]
@@ -191,10 +193,11 @@ def program(var_length, displ):
   p(displ)
 
 def write():
+  global out_stream
   debug('writing')
   val = store(s())
   debug('val: %d chr: %s' % (val, chr(val)))
-  sys.stdout.write(chr(val))
+  out_stream.write(chr(val))
   s(-1)
   p(1)
       
@@ -277,7 +280,10 @@ def setup(filename):
   s(code_length + 3)
   debug('setup done: b: %d s %d' % (b(), s()))
 
-def interpret(filename):
+def interpret(filename, _out_stream):
+  global out_stream
+  out_stream = _out_stream
+
   setup(filename)
   while True:
     try:
@@ -355,4 +361,4 @@ def interpret(filename):
       error('Unexpected opcode %d' % op)
 
 if __name__ == '__main__':
-  interpret(sys.argv[1])
+  interpret(sys.argv[1], sys.stdout)

@@ -7,7 +7,7 @@ from parser import pass2
 from assembler import pass3
 from interpreter import interpret
 
-def compile_pascal(source, dest, is_debug, is_interpret):
+def compile_pascal(source, dest, is_debug, is_interpret, out_stream):
   '''
   DID YOU KNOW that compile() is a built in function?
   '''
@@ -27,7 +27,7 @@ def compile_pascal(source, dest, is_debug, is_interpret):
   close()
   debug('assembly complete.' )
   if is_interpret:
-    interpret(dest)
+    interpret(dest, out_stream)
   else:
     debug('run program now with `python interpreter.py %s`' % dest)
 
@@ -37,7 +37,7 @@ def main():
   dest = sys.argv[2]
   is_debug = '-d' in sys.argv or '--debug' in sys.argv
   interpret = '-i' in sys.argv or '--interpret' in sys.argv
-  compile_pascal(source, dest, is_debug, interpret)
+  compile_pascal(source, dest, is_debug, interpret, sys.stdout)
 
 if __name__ == '__main__':
   main()
