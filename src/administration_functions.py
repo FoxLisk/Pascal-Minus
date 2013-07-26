@@ -22,8 +22,7 @@ def get_code(filename):
       codes.append(int(c))
     except ValueError:
       codes.append(bytecodes[c])
-  return  codes
-  #return [Op.PROGRAM, 0, 3, Op.CONSTANT, 65, Op.WRITE, Op.ENDPROG]
+  return codes
 
 def eof():
   return eof

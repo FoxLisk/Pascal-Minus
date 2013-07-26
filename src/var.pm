@@ -1,11 +1,13 @@
 program vars;
 var x, y : Integer;
-procedure p(p1 : Integer);
+procedure p(var p1 : Integer);
 begin
-  p1 := 1
+  p1 := 999
 end;
 begin
-x := 999;
+x := 11;
+y := 22;
+p(x);
 y := x
 end.
 

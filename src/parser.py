@@ -203,7 +203,9 @@ def add_var(name, type):
 def add_proc(name, params):
   if name in scope['proc']:
     error('Cannot redefine procedure %s' % name)
-  scope['proc'][name] = Proc(name, params)
+  proc = Proc(name, params)
+  scope['proc'][name] = proc
+  return proc
 
 def add_param(param):
   '''
@@ -317,6 +319,7 @@ def block_body(var_label, begin_label):
 def procedure_definition():
   expect('procedure')
   proc_name = name()
+  print 'PROC %s' % proc_name
   procedure_block(proc_name)
   expect(';')
 
@@ -325,14 +328,19 @@ def procedure_block(proc_name):
     expect('(')
     params = formal_parameter_list()
     expect(')')
-  add_proc(proc_name, params)
+  proc = add_proc(proc_name, params)
   push_scope()
+  parameter_addressing(params)
   for param in params:
     add_param(param)
   expect(';')
-  var_label = new_label()
-  begin_label = new_label()
-  block_body(var_label, begin_label)
+  var_length_label = new_label()
+  begin_label = proc.label
+  block_body(var_length_label, begin_label)
+
+  param_length = sum(map(lambda p: 1 if p.is_var_param else p.length(), params))
+
+  emit_code(Op.ENDPROC, param_length)
   pop_scope()
 
 def formal_parameter_list():
@@ -340,7 +348,6 @@ def formal_parameter_list():
   while check(';'):
     expect(';')
     map(lambda x: params.append(x), parameter_definition())
-  parameter_addressing(params)
   return params
 
 def parameter_addressing(params):
@@ -507,25 +514,42 @@ def procedure_statement(proc_name):
   proc = get('proc', proc_name)
   if proc is None:
     error('trying to call nonexistent procedure')
+  params = []
   if check('('):
     expect('(')
-    params = actual_parameter_list()
+    params = actual_parameter_list(proc)
     expect(')')
   if len(params) != len(proc.params):
     error('`%s` takes %d parameters; %d given' % (proc_name, len(proc.params), len(params)))
   for i in range(len(params)):
     if params[i] != proc.params[i].type: 
       error('Parameter %d passed to `%s` is of type `%s`; expecting `%s`' % (i + 1, proc_name, params[i], proc.params[i].type))
+  if proc.name == 'Write':
+    emit_code(Op.Write)
+  elif proc.name == 'Read':
+    error('Read not implemented')
+  else:
+    emit_code(Op.PROCCALL, block_level - proc.level, proc.label)
 
-def actual_parameter_list():
+def actual_parameter_list(proc):
   '''
   returns the list of parameter types
   '''
-  params = [actual_parameter()]
-  while check(','):
-    expect(',')
-    params.append(actual_parameter())
-  return params
+  param_types = []
+  first = True
+  for param in proc.params:
+    if not first:
+      expect(',')
+    if param.is_var_param:
+      if not check('name'):
+        error('Var params must be passed a variable')
+      var_name = name()
+      var = variable_access(var_name)
+    else:
+      var = expression()
+    param_types.append(var)
+    first = False
+  return param_types
 
 def actual_parameter():
   type = expression()
