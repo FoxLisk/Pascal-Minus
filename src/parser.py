@@ -657,7 +657,7 @@ class Parser:
       else:
         if type.name != other_type.name:
           error('Equality checks must be between equivalent types', self.line_no)
-      type = get('type', 'Boolean')
+      type = sefl.scope.get('type', 'Boolean')
 
       if op == '<':
         self.emit_code(Op.LESS)
@@ -810,7 +810,7 @@ class Parser:
     self.expect(']')
     self.expect('of')
     type_of_name = self.name()
-    type_of = get('type', type_of_name)
+    type_of = self.scope.get('type', type_of_name)
     self.scope.add_type(type_name, ArrayType(type_name, type_of, lower[1], upper[1]))
 
   def index_range(self):
