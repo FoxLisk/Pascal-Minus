@@ -72,7 +72,7 @@ class Interpreter:
     #s() stores the address of the array to access currently, so we're replacing the location of the array with the location of the specific element
     addr = self.s + (i - lower) * length 
     self.set_store(addr, self.s)
-    self.p += 3
+    self.p += 5
 
   def field(self, displ):
     #the displ is the distance from the start of a record to the element we need, which makes this very simple

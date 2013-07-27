@@ -485,7 +485,7 @@ class Parser:
       self.expect('[')
       self.expression()
       self.expect(']')
-      self.emit_code(Op.INDEX, type.lower, type.upper, type.type_of.length(), line_no)
+      self.emit_code(Op.INDEX, type.lower, type.upper, type.type_of.length(), self.line_no)
       return type.type_of
     elif self.check('.'):
       if not type.is_record:

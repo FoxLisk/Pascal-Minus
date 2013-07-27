@@ -87,7 +87,7 @@ code_lengths = {
   Op.FIELD: 2,
   Op.GOTO: 2, 
   Op.GREATER: 1,
-  Op.INDEX: 4, 
+  Op.INDEX: 5, 
   Op.LESS: 1,
   Op.MINUS: 1,
   Op.MODULO: 1,
