@@ -438,11 +438,11 @@ class Parser:
         #this is okay because, even though statements can be empty, a name cannot follow a statement
         #anywhere so if we find a name we dont need to backtrack - it's just game over
         error('Found name `%s` not associated with a var or proc in a statement' % name)
-    elif check('if'):
+    elif self.check('if'):
       self.if_statement()
-    elif check('while'):
+    elif self.check('while'):
       self.while_statement()
-    elif check('begin'):
+    elif self.check('begin'):
       self.compound_statement()
 
   def assignment_statement(self, name):
