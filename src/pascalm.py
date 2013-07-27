@@ -4,7 +4,7 @@ from errors import Errors
 from scanner import Scanner
 from parser import Parser
 from assembler import Assembler
-from interpreter import interpret
+from interpreter import Interpreter
 
 def write(codes, filename):
   f = open(filename, 'w')
@@ -39,7 +39,8 @@ def compile_pascal(source, dest, is_debug, is_interpret = False, out_stream = sy
     write(assembled, dest)
   debug('assembly complete.' )
   if is_interpret:
-    interpret(out_stream, code = assembled)
+    interp = Interpreter(out_stream, code = assembled)
+    interp.interpret()
   else:
     debug('run program now with `python interpreter.py %s`' % dest)
 

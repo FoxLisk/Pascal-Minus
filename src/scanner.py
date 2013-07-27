@@ -93,12 +93,12 @@ class Scanner:
     #ch = '{'
     self.next_char()
     while self.ch not in ['}', Scanner.ETX]:
-      if ch == '{':
+      if self.ch == '{':
         self.comment()
-      elif ch == '\n':
+      elif self.ch == '\n':
         self.end_line()
       self.next_char()
-    if ch == '}':
+    if self.ch == '}':
       self.next_char()
     else:
       self.error(Errors.COMMENT)
