@@ -35,3 +35,7 @@ compile_pascal('cases/array.pm', 'dest', False, True, stream)
 assert stream.val() == 'A', stream.val()
 stream.reset()
 
+compile_pascal('cases/record.pm', 'dest', False, True, stream)
+assert stream.val() == 'AB', stream.val()
+stream.reset()
+

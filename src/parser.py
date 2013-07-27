@@ -664,7 +664,6 @@ class Parser:
     self.expect(':')
     type_name = self.name()
     type = self.scope.get('type', type_name)
-    print 'Record section: returning dudes of type ' + str(type)
     return names, type
 
   def expression(self):
