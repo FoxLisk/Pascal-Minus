@@ -562,11 +562,21 @@ class Parser:
   def while_statement(self):
     #print 'while_statement'
     self.expect('while')
+    start_label = self.labeler.new_label()
+    jump_label = self.labeler.new_label()
+
+    self.emit_code(Op.DEFADDR, start_label)
     type = self.expression()
+    #expression has to evaluate before DO
     if type.name != 'Boolean':
       error('Condition of an if statement must return a Boolean', self.line_no)
+
+    self.emit_code(Op.DO, jump_label)
+
     self.expect('do')
     self.statement()
+    self.emit_code(Op.GOTO, start_label)
+    self.emit_code(Op.DEFADDR, jump_label)
 
   def constant_definition_part(self):
     #print 'constant_definition_part'

@@ -79,6 +79,8 @@ code_lengths = {
   Op.CONSTANT: 2,
   Op.DIVIDE: 1,
   Op.DO: 2,
+  Op.DEFADDR: 2, 
+  Op.DEFARG: 3,
   Op.ENDPROC: 2,
   Op.ENDPROG: 1,
   Op.EQUAL: 1,

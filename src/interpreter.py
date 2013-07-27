@@ -121,8 +121,10 @@ class Interpreter:
     self.p += displ
 
   def do(self, displ):
-    if self.store[self.s] == 1: #store(s()) is the result of whatever expression we're evaluating
-      self.p += 2 #move past the DISPL, DO instruction into the loop body
+    debug('displ: %d' % displ)
+    debug('Value at top of stack: %d' % self.store[self.s])
+    if self.store[self.s] == 1: #store[s] is the result of whatever expression we're evaluating
+      self.p += 2 #move past the DO, DISPL instruction into the loop body
     else:
       self.p += displ #jump to the end of the body
 
