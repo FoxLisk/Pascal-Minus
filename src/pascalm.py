@@ -3,7 +3,7 @@ from administration_functions import reset, rewrite, close, debug, set_debug, pr
 from errors import Errors
 from scanner import Scanner
 from parser import Parser
-from assembler import assemble
+from assembler import Assembler
 from interpreter import interpret
 
 def write(codes, filename):
@@ -31,7 +31,8 @@ def compile_pascal(source, dest, is_debug, is_interpret = False, out_stream = sy
     else:
       write(bytecodes, source + "_unassembled")
   debug('parsing complete')
-  assembled = assemble(bytecodes)
+  assembler = Assembler(bytecodes)
+  assembled = assembler.assemble()
   if is_debug:
     write(prettify(assembled), dest)
   else:
