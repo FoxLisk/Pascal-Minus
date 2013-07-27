@@ -63,7 +63,7 @@ class RecordType(Type):
   def __init__(self, name, fields):
     '''
     fields should be a dict of the form
-    { field_name: type_name }
+    { field_name: type }
     '''
     super(RecordType, self).__init__(name)
     self.fields = fields
@@ -495,7 +495,7 @@ class Parser:
       if not field_name in type.fields:
         error('Trying to access missing field %s from type %s' % (field_name, type.name), self.line_no)
       self.emit_code(Op.FIELD, type.field_displ(field_name))
-      return self.scope.get('type', type.fields[field_name])
+      return type.fields[field_name]
     else:
       error('Expected selector', self.line_no)
 
@@ -663,7 +663,9 @@ class Parser:
       names.append(field_name)
     self.expect(':')
     type_name = self.name()
-    return names, type_name
+    type = self.scope.get('type', type_name)
+    print 'Record section: returning dudes of type ' + str(type)
+    return names, type
 
   def expression(self):
     '''
