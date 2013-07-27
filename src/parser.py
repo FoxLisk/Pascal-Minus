@@ -550,14 +550,28 @@ class Parser:
   def if_statement(self):
     #print 'if_statement'
     self.expect('if')
+    stmt_label = self.labeler.new_label()
+    else_label = self.labeler.new_label()
+    end_label = self.labeler.new_label()
     type = self.expression()
     if type.name != 'Boolean':
       error('Condition of an if statement must return a Boolean', self.line_no)
+
+    self.emit_code(Op.DO, else_label) #if (expression from above), go to the statement; else jump to else_label
     self.expect('then')
     self.statement()
+    #if there's no else, this is redundant, and could be cleaned up to avoid a 0-displ jump
+    self.emit_code(Op.GOTO, end_label)
+
     if self.check('else'):
       self.expect('else')
+      #if there's an else, else_label is the beginning of the else block
+      self.emit_code(Op.DEFADDR, else_label)
       self.statement()
+    else:
+      #if there's no else, else_label is just right after the then statement
+      self.emit_code(Op.DEFADDR, else_label)
+    self.emit_code(Op.DEFADDR, end_label)
 
   def while_statement(self):
     #print 'while_statement'
