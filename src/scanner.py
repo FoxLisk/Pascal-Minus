@@ -14,7 +14,7 @@ class WordType:
 class Scanner:
   ETX = -1
   invisible = Set([chr(x) for x in range(0, 40) if chr(x) not in ' \n'])
-  letters = list('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
+  letters = list('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_')
   separators = [' ', '\n', '{']
   standard_names = ['Integer', 'Boolean', 'False', 'True', 'Read', 'Write']
   digits = [str(x) for x in range(10)]
