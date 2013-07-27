@@ -657,7 +657,7 @@ class Parser:
       else:
         if type.name != other_type.name:
           error('Equality checks must be between equivalent types', self.line_no)
-      type = sefl.scope.get('type', 'Boolean')
+      type = self.scope.get('type', 'Boolean')
 
       if op == '<':
         self.emit_code(Op.LESS)
