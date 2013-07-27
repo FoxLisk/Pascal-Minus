@@ -27,15 +27,15 @@ class Type(object):
     return self.name
 
 class IntegerType(Type):
-  def __init__(self, name):
-    super(IntegerType, self).__init__(name)
+  def __init__(self):
+    super(IntegerType, self).__init__('Integer')
 
   def length(self):
     return 1
 
 class BooleanType(Type):
-  def __init__(self, name):
-    super(BooleanType, self).__init__(name)
+  def __init__(self):
+    super(BooleanType, self).__init__('Boolean')
 
   def length(self):
     return 1
@@ -133,7 +133,7 @@ current_symbol = None
 #the standard types, Integer and Boolean, are 1 and 2
 #the standard values, False and True, are 3 and 4
 #the standard procs, Read and Write, are 5 and 6
-scope = {'var': {}, 'const': {'False': Constant('False', 2, False), 'True': Constant('True', 2, False)},  'proc': {}, 'type': {'Integer': IntegerType('Integer'), 'Boolean': BooleanType('Boolean')}}
+scope = {'var': {}, 'const': {'False': Constant('False', 2, False), 'True': Constant('True', 2, False)},  'proc': {}, 'type': {'Integer': IntegerType(), 'Boolean': BooleanType()}}
 
 parsed_so_far = []
 
