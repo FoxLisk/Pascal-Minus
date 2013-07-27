@@ -1,4 +1,5 @@
-from administration_functions import get_code, debug
+from copy import copy
+from administration_functions import get_code, debug, set_debug
 from bytecodes import Op, reverse_bytecodes, bytecodes
 import sys
 
@@ -271,20 +272,24 @@ def log_not():
 def minus():
   unary_op(lambda x: -x)
 
-def setup(filename):
+def setup(filename = None, code = None):
   global _store, code_length
-  _store = get_code(filename)
+  if (filename is None) == (code is None):
+    raise Exception("Must pass in a filename XOR a list of bytecodes")
+  if filename is not None:
+    _store = get_code(filename)
+  else:
+    _store = copy(code)
   debug('loaded %d words of program code' % len(_store))
   code_length = len(_store)
   b(code_length)
   s(code_length + 3)
   debug('setup done: b: %d s %d' % (b(), s()))
 
-def interpret(filename, _out_stream):
+def interpret(_out_stream, filename = None, code = None):
   global out_stream
   out_stream = _out_stream
-
-  setup(filename)
+  setup(filename, code)
   while True:
     try:
       op = int(store(p()))
@@ -361,4 +366,5 @@ def interpret(filename, _out_stream):
       error('Unexpected opcode %d' % op)
 
 if __name__ == '__main__':
-  interpret(sys.argv[1], sys.stdout)
+  set_debug('-d' in sys.argv or '--debug' in sys.argv)
+  interpret(sys.stdout, filename = sys.argv[1])

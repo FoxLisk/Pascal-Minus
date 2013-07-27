@@ -70,3 +70,38 @@ reverse_bytecodes = {
 }
 
 bytecodes = {y:x for x, y in reverse_bytecodes.items()}
+
+#map from codes to skip to the length (number of codes to skip when one is encountered)
+code_lengths = {
+  Op.ADD: 1,
+  Op.AND: 1,
+  Op.ASSIGN: 2,
+  Op.CONSTANT: 2,
+  Op.DIVIDE: 1,
+  Op.DO: 2,
+  Op.ENDPROC: 2,
+  Op.ENDPROG: 1,
+  Op.EQUAL: 1,
+  Op.FIELD: 2,
+  Op.GOTO: 2, 
+  Op.GREATER: 1,
+  Op.INDEX: 4, 
+  Op.LESS: 1,
+  Op.MINUS: 1,
+  Op.MODULO: 1,
+  Op.MULTIPLY: 1,
+  Op.NOT: 1,
+  Op.NOTEQUAL: 1,
+  Op.NOTGREATER: 1,
+  Op.NOTLESS: 1,
+  Op.OR: 1,
+  Op.PROCCALL: 3,
+  Op.PROCEDURE: 3,
+  Op.PROGRAM: 3,
+  Op.SUBTRACT: 1,
+  Op.VALUE: 2,
+  Op.VARIABLE: 3,
+  Op.VARPARAM: 3,
+  Op.READ: 1,
+  Op.WRITE: 1,
+}

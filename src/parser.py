@@ -1,11 +1,12 @@
 from errors import Errors
-from administration_functions import error, emit_code
+from administration_functions import error
 from symbols import symbols, reverse_symbols
 from first import first
 from bytecodes import Op
 
 block_level = 0
 label_no = 0
+bytecodes = []
 
 def new_label():
   global label_no
@@ -218,13 +219,20 @@ def add_param(param):
 add_proc('Write', [Parameter('x', get('type', 'Integer'), False)])
 add_proc('Read', [Parameter('x', get('type', 'Integer'), True)])
 
-def _next_symbol():
+def emit_code(*args):
+  global bytecodes
+  for arg in args:
+    bytecodes.append(arg)
+
+def _next_symbol(all_symbols):
   #print '_next_symbol'
   global line_no
+  '''
   f = open('temp1')
   all_symbols = f.read()
   f.close()
   all_symbols = [s for s in all_symbols.split(' ') if s != '']
+  '''
   is_nl = False
   is_name = False
   is_int = False
@@ -269,7 +277,6 @@ def next_symbol():
     return current_symbol
   except StopIteration:
     error('out of symbols')
-next_symbol.symbols = _next_symbol()
 
 def expect(symbol):
   code = symbols[symbol]
@@ -319,7 +326,6 @@ def block_body(var_label, begin_label):
 def procedure_definition():
   expect('procedure')
   proc_name = name()
-  print 'PROC %s' % proc_name
   procedure_block(proc_name)
   expect(';')
 
@@ -842,11 +848,8 @@ def constant():
   else:
     error("Expecting a constant - either a Numeral or a named constant")
     
-def pass2():
+def parse(tokens):
+  next_symbol.symbols = _next_symbol(tokens)
   next_symbol()
   program()
-  try:
-    pass
-  except Exception as e:
-    raise(e)
-    error(str(e))
+  return bytecodes

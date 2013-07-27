@@ -1,43 +1,53 @@
 import sys
-import administration_functions
-from administration_functions import reset, rewrite, read, close, debug, set_debug
+from administration_functions import reset, rewrite, close, debug, set_debug, prettify
 from errors import Errors
-from scanner import pass1
-from parser import pass2
-from assembler import pass3
+from scanner import scan
+from parser import parse
+from assembler import assemble
 from interpreter import interpret
 
-def compile_pascal(source, dest, is_debug, is_interpret, out_stream):
+def write(codes, filename):
+  f = open(filename, 'w')
+  for c in codes:
+    f.write(str(c) + " ")
+  f.close()
+
+def compile_pascal(source, dest, is_debug, is_interpret = False, out_stream = sys.stdout, output_tokens = False, output_bytecodes = False):
   '''
   DID YOU KNOW that compile() is a built in function?
   '''
   set_debug(is_debug)
-  administration_functions.debug("Compiling %s into %s" % (source, dest))
-  reset(source)
-  rewrite('temp1')
-  pass1()
-  close()
+  debug("Compiling %s into %s" % (source, dest))
+  tokens = scan(source)
+  if output_tokens:
+    write(tokens, source + "_tokenized")
   debug('scanning complete')
-  rewrite('temp2')
-  pass2()
-  close()
+  bytecodes = parse(tokens)
+  if output_bytecodes:
+    if is_debug:
+      write(prettify(bytecodes), source + "_unassembled")
+    else:
+      write(bytecodes, source + "_unassembled")
   debug('parsing complete')
-  rewrite(dest)
-  pass3()
-  close()
+  assembled = assemble(bytecodes)
+  if is_debug:
+    write(prettify(assembled), dest)
+  else:
+    write(assembled, dest)
   debug('assembly complete.' )
   if is_interpret:
-    interpret(dest, out_stream)
+    interpret(out_stream, code = assembled)
   else:
     debug('run program now with `python interpreter.py %s`' % dest)
-
 
 def main():
   source = sys.argv[1]
   dest = sys.argv[2]
   is_debug = '-d' in sys.argv or '--debug' in sys.argv
   interpret = '-i' in sys.argv or '--interpret' in sys.argv
-  compile_pascal(source, dest, is_debug, interpret, sys.stdout)
+  output_tokens = '-t' in sys.argv or '--tokens' in sys.argv
+  output_bytecodes = '-b' in sys.argv or '--bytecodes' in sys.argv
+  compile_pascal(source, dest, is_debug, interpret, sys.stdout, output_tokens, output_bytecodes)
 
 if __name__ == '__main__':
   main()

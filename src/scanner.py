@@ -1,6 +1,6 @@
 from sets import Set
 from errors import Errors
-from administration_functions import eof, emit, read, new_line, error
+from administration_functions import eof, new_line, error
 from symbols import symbols, reverse_symbols
 
 ETX = -1
@@ -13,22 +13,18 @@ separators = [' ', '\n', '{']
 standard_names = ['Integer', 'Boolean', 'False', 'True', 'Read', 'Write']
 
 seen_proc = False
-def emit1(stype):
-  #print "emitting %s" % reverse_symbols[stype]
-  global seen_proc
-  emit(stype)
-
-def emit2(stype, val):
-  global symbol_table, seen_proc
-  emit(stype)
-  emit(val)
-
 line_no = 1
+
+tokens = []
+
+def emit(*vals):
+  global tokens
+  map(lambda v: tokens.append(v), vals)
 
 def begin_line(new_line_no):
   new_line(new_line_no)
   #print 'new line, emitting %d, %d' % (symbols['\n'], new_line_no)
-  emit2(symbols['\n'], new_line_no)
+  emit(symbols['\n'], new_line_no)
 
 def end_line():
   global line_no
@@ -72,13 +68,12 @@ def search(name):
 
 def next_char():
   global ch
-  if eof():
-    ch = ETX
-  else:
-    ch = read()
-    "  read %s" % ch
+  try:
+    ch = next_char.chars.next()
     if ch in invisible:
       next_char() #TODO make this not recursive guhh
+  except StopIteration:
+    ch = ETX
 
 def skip_separators():
   while ch in separators:
@@ -128,7 +123,7 @@ def scan_numeral():
   while ch in digits:
     acc += ch
     next_char()
-  emit2(symbols['numeral'], int(acc))
+  emit(symbols['numeral'], int(acc))
 
 def scan_word():
   #print 'scanning word'
@@ -140,59 +135,68 @@ def scan_word():
   is_name, index = search(accum)
   if is_name:
     #print 'is name: emitting %d, %d' % (symbols['name'], index)
-    emit2(symbols['name'], accum)
+    emit(symbols['name'], accum)
   else:
     #print 'is reserved word, emitting %d' % index
-    emit1(index)
+    emit(index)
 
 def scan_symbol():
-  emit1(symbols[ch])
+  emit(symbols[ch])
   next_char()
 
 def scan_less():
   #assume ch = '<'
   next_char()
   if ch == '=':
-    emit1(symbols['<='])
+    emit(symbols['<='])
     next_char()
   elif ch == '>':
-    emit1(symbols['<>'])
+    emit(symbols['<>'])
     next_char()
   else:
-    emit1(symbols['<'])
+    emit(symbols['<'])
 
 def scan_greater():
   #assume ch = '>'
   next_char()
   if ch == '=':
-    emit1(symbols['>='])
+    emit(symbols['>='])
     next_char()
   else:
-    emit1(symbols['>'])
+    emit(symbols['>'])
 
 def scan_dots():
   #assume ch = '.'
   next_char()
   if ch == '.':
-    emit1(symbols['..'])
+    emit(symbols['..'])
     next_char()
   else:
-    emit1(symbols['.'])
+    emit(symbols['.'])
 
 def scan_colon():
   #assume ch = ':'
   next_char()
   if ch == '=':
-    emit1(symbols[':='])
+    emit(symbols[':='])
     next_char()
   else:
-    emit1(symbols[':'])
+    emit(symbols[':'])
 
 def scan_unknown():
-  emit1(symbols['unknown'])
+  emit(symbols['unknown'])
   next_char()
 
-def pass1():
+def scan(source):
+  #setup all the code in memory
+  f = open(source)
+  code = f.read()
+  f.close()
+  def chars():
+    for c in code:
+      yield c
+  next_char.chars = chars()
+
   #keep the scanner always one character ahead
   #this allows us to handle scanning multi-char symbols (<=)
   #without having to deal with remember whether we're ahead
@@ -201,4 +205,5 @@ def pass1():
   next_char()
   while ch != ETX:
     next_symbol()
-  emit1(symbols['endtext'])
+  emit(symbols['endtext'])
+  return tokens
