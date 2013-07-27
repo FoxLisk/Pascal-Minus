@@ -1,10 +1,10 @@
 import sys
 from administration_functions import reset, rewrite, close, debug, set_debug, prettify
 from errors import Errors
-from scanner import scan
-from parser import parse
-from assembler import assemble
-from interpreter import interpret
+from scanner import Scanner
+from parser import Parser
+from assembler import Assembler
+from interpreter import Interpreter
 
 def write(codes, filename):
   f = open(filename, 'w')
@@ -18,25 +18,29 @@ def compile_pascal(source, dest, is_debug, is_interpret = False, out_stream = sy
   '''
   set_debug(is_debug)
   debug("Compiling %s into %s" % (source, dest))
-  tokens = scan(source)
+  scanner = Scanner(source)
+  tokens = scanner.scan()
   if output_tokens:
     write(tokens, source + "_tokenized")
   debug('scanning complete')
-  bytecodes = parse(tokens)
+  parser = Parser(tokens)
+  bytecodes = parser.parse()
   if output_bytecodes:
     if is_debug:
       write(prettify(bytecodes), source + "_unassembled")
     else:
       write(bytecodes, source + "_unassembled")
   debug('parsing complete')
-  assembled = assemble(bytecodes)
+  assembler = Assembler(bytecodes)
+  assembled = assembler.assemble()
   if is_debug:
     write(prettify(assembled), dest)
   else:
     write(assembled, dest)
   debug('assembly complete.' )
   if is_interpret:
-    interpret(out_stream, code = assembled)
+    interp = Interpreter(out_stream, code = assembled)
+    interp.interpret()
   else:
     debug('run program now with `python interpreter.py %s`' % dest)
 

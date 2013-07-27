@@ -48,10 +48,6 @@ def rewrite(filename):
     output_file.close()
   output_file = open(filename, 'w')
 
-def new_line(num):
-  line_no = num
-  correct_line = True
-
 def close():
   global input_file, output_file
   if input_file is not None:
