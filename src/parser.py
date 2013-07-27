@@ -133,7 +133,7 @@ current_symbol = None
 #the standard types, Integer and Boolean, are 1 and 2
 #the standard values, False and True, are 3 and 4
 #the standard procs, Read and Write, are 5 and 6
-scope = {'var': {}, 'const': {'False': Constant(3, 2, False), 'True': Constant(4, 2, False)},  'proc': {}, 'type': {'Integer': IntegerType('Integer'), 'Boolean': BooleanType('Boolean')}}
+scope = {'var': {}, 'const': {'False': Constant('False', 2, False), 'True': Constant('True', 2, False)},  'proc': {}, 'type': {'Integer': IntegerType('Integer'), 'Boolean': BooleanType('Boolean')}}
 
 parsed_so_far = []
 
