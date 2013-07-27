@@ -101,7 +101,7 @@ class Scanner:
     if self.ch == '}':
       self.next_char()
     else:
-      self.error(Errors.COMMENT)
+      error(Errors.COMMENT)
 
   def next_symbol(self):
     self.skip_separators()

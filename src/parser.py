@@ -127,7 +127,7 @@ class Proc:
     self.level = block_level
     self.label = label
 
-def error(msg):
+def error(msg, line_no):
   error_msg = msg + ' on line %d' % line_no
   raise Exception(error_msg)
 
@@ -160,25 +160,25 @@ class Scope:
 
   def add_type(self, name, type):
     if name in self.scope['type']:
-      error('Cannot redefine type %s' % name)
+      error('Cannot redefine type %s' % name,self.line_no)
     self.scope['type'][name] = type
     return type
 
   def add_const(self, name, type, value):
     if name in self.scope['const']:
-      error('Cannot redefine constant %s' % name)
+      error('Cannot redefine constant %s' % name, self.line_no)
     self.scope['const'][name] = Constant(name, type, value)
 
   def add_var(self, name, type):
     if name in self.scope['var']:
-      error('Cannot redefine variable %s' % name)
+      error('Cannot redefine variable %s' % name, self.line_no)
     var = Variable(name, type)
     self.scope['var'][name] = var
     return var
 
   def add_proc(self, name, params, level, label):
     if name in self.scope['proc']:
-      error('Cannot redefine procedure %s' % name)
+      error('Cannot redefine procedure %s' % name, self.line_no)
     proc = Proc(name, params, level, label)
     self.scope['proc'][name] = proc
     return proc
@@ -188,7 +188,7 @@ class Scope:
     adds a parameter object as a variable for the current scope
     '''
     if param.name in self.scope['var']:
-      error('Cannot redefine variable %s' % name)
+      error('Cannot redefine variable %s' % name, self.line_no)
     self.scope['var'][param.name] = param
 
 class Parser:
@@ -215,7 +215,7 @@ class Parser:
     #print 'pop_scope'
     self.block_level -= 1
     if self.block_level < 0:
-      self.error('Parser error: reached negative block level')
+      self.error('Parser error: reached negative block level', self.line_no)
     self.scope = self.scope.parent
 
   def emit_code(self, *args):
@@ -266,15 +266,15 @@ class Parser:
       self.current_symbol = self.symbols.next()
       return self.current_symbol
     except StopIteration:
-      error('out of symbols')
+      error('out of symbols', self.line_no)
 
   def expect(self, symbol):
     code = symbols[symbol]
     if self.current_symbol != code:
       if self.current_symbol in reverse_symbols:
-        error("Expected %s, found %s" % (symbol, reverse_symbols[self.current_symbol]))
+        error("Expected %s, found %s" % (symbol, reverse_symbols[self.current_symbol]), self.line_no)
       else:
-        error("Expected %s, found unknown symbol %d" % (symbol, self.current_symbol))
+        error("Expected %s, found unknown symbol %d" % (symbol, self.current_symbol), self.line_no)
     else:
       self.next_symbol()
 
@@ -410,7 +410,7 @@ class Parser:
     type = self.scope.get('type', t)
     #print 'variable group: name returned type %d' % t
     if type is None:
-      error("Trying to declare variables of undeclared type %s" % t)
+      error("Trying to declare variables of undeclared type %s" % t, self.line_no)
     ret = []
     for n in names:
       ret.append((n, type))
@@ -437,7 +437,7 @@ class Parser:
       else:
         #this is okay because, even though statements can be empty, a name cannot follow a statement
         #anywhere so if we find a name we dont need to backtrack - it's just game over
-        error('Found name `%s` not associated with a var or proc in a statement' % name)
+        error('Found name `%s` not associated with a var or proc in a statement' % name, self.line_no)
     elif self.check('if'):
       self.if_statement()
     elif self.check('while'):
@@ -463,7 +463,7 @@ class Parser:
     '''
     var = self.scope.get('var', var_name)
     if var is None:
-      error('Cannot assign to missing var %s' % var_name)
+      error('Cannot assign to missing var %s' % var_name, self.line_no)
     level = self.block_level - var.level
     op = Op.VARPARAM if var.is_var_param else Op.VARIABLE
     self.emit_code(op, level, var.displ)
@@ -481,7 +481,7 @@ class Parser:
     '''
     if self.check('['):
       if not type.is_array:
-        error('Trying to use an indexed selector on non-array variable %s' % var_name)
+        error('Trying to use an indexed selector on non-array variable %s' % var_name, self.line_no)
       self.expect('[')
       self.expression()
       self.expect(']')
@@ -489,15 +489,15 @@ class Parser:
       return type.type_of
     elif self.check('.'):
       if not type.is_record:
-        error('Trying to use a field selector on non-record variable %s' % var_name)
+        error('Trying to use a field selector on non-record variable %s' % var_name, self.line_no)
       self.expect('.')
       field_name = self.name()
       if not field_name in type.fields:
-        error('Trying to access missing field %s from type %s' % (field_name, type.name))
+        error('Trying to access missing field %s from type %s' % (field_name, type.name), self.line_no)
       self.emit_code(Op.FIELD, type.field_displ(field_name))
       return self.scope.get('type', type.fields[field_name])
     else:
-      error('Expected selector')
+      error('Expected selector', self.line_no)
 
   def procedure_statement(self, proc_name):
     #print 'procedure_statement'
@@ -505,21 +505,21 @@ class Parser:
     #assignment or procedure statement
     proc = self.scope.get('proc', proc_name)
     if proc is None:
-      error('trying to call nonexistent procedure')
+      error('trying to call nonexistent procedure', self.line_no)
     params = []
     if self.check('('):
       self.expect('(')
       params = self.actual_parameter_list(proc)
       self.expect(')')
     if len(params) != len(proc.params):
-      error('`%s` takes %d parameters; %d given' % (proc_name, len(proc.params), len(params)))
+      error('`%s` takes %d parameters; %d given' % (proc_name, len(proc.params), len(params)), self.line_no)
     for i in range(len(params)):
       if params[i] != proc.params[i].type: 
-        error('Parameter %d passed to `%s` is of type `%s`; expecting `%s`' % (i + 1, proc_name, params[i], proc.params[i].type))
+        error('Parameter %d passed to `%s` is of type `%s`; expecting `%s`' % (i + 1, proc_name, params[i], proc.params[i].type), self.line_no)
     if proc.name == 'Write':
       self.emit_code(Op.WRITE)
     elif proc.name == 'Read':
-      error('Read not implemented')
+      error('Read not implemented', self.line_no)
     else:
       self.emit_code(Op.PROCCALL, block_level - proc.level, proc.label)
 
@@ -534,7 +534,7 @@ class Parser:
         self.expect(',')
       if param.is_var_param:
         if not check('name'):
-          error('Var params must be passed a variable')
+          error('Var params must be passed a variable', self.line_no)
         var_name = self.name()
         var = self.variable_access(var_name)
       else:
@@ -552,7 +552,7 @@ class Parser:
     self.expect('if')
     type = self.expression()
     if type.name != 'Boolean':
-      error('Condition of an if statement must return a Boolean')
+      error('Condition of an if statement must return a Boolean', self.line_no)
     self.expect('then')
     self.statement()
     if self.check('else'):
@@ -564,7 +564,7 @@ class Parser:
     self.expect('while')
     type = self.expression()
     if type.name != 'Boolean':
-      error('Condition of an if statement must return a Boolean')
+      error('Condition of an if statement must return a Boolean', self.line_no)
     self.expect('do')
     self.statement()
 
@@ -604,7 +604,7 @@ class Parser:
     elif self.current_symbol in first('NewRecordType'):
       self.new_record_type(type_name)
     else:
-      error("Expecting a type definition")
+      error("Expecting a type definition", self.line_no)
 
   def new_record_type(self, type_name):
     #print 'new_record_type'
@@ -653,10 +653,10 @@ class Parser:
 
       if op in ['<', '<=', '>=']:
         if type.name != 'Integer' or other_type.name != 'Integer':
-          error('Comparisons must be with Integer type variables')
+          error('Comparisons must be with Integer type variables', self.line_no)
       else:
         if type.name != other_type.name:
-          error('Equality checks must be between equivalent types')
+          error('Equality checks must be between equivalent types', self.line_no)
       type = get('type', 'Boolean')
 
       if op == '<':
@@ -689,13 +689,13 @@ class Parser:
       other_type = self.term()
       if op == 'or':
         if type.name != 'Boolean' or other_type.name != 'Boolean':
-          error('Can only use `or` operator with Boolean types')
+          error('Can only use `or` operator with Boolean types', self.line_no)
         else:
           type = self.scope.get('type', 'Boolean')
         self.emit_code(Op.OR)
       else:
         if type.name != 'Integer' or other_type.name != 'Integer':
-          error('Can only use adding `%s` operator with Integers; found %s and %s' % (op, type.name, other_type.name))
+          error('Can only use adding `%s` operator with Integers; found %s and %s' % (op, type.name, other_type.name), self.line_no)
         else:
           type = self.scope.get('type', 'Integer')
         if op == '+':
@@ -708,19 +708,19 @@ class Parser:
     if any(map(self.check, ['<', '=', '<=', '<>', '>='])):
       self.next_symbol()
     else:
-      error('expected relational operator')
+      error('expected relational operator', self.line_no)
 
   def sign_operator(self):
     if self.check('+') or self.check('-'):
       self.next_symbol()
     else:
-      error('Expected sign operator')
+      error('Expected sign operator', self.line_no)
 
   def adding_operator(self):
     if self.check('+') or self.check('-') or self.check('or'):
       self.next_symbol()
     else:
-      error('expected adding operator')
+      error('expected adding operator', self.line_no)
 
   def term(self):
     '''
@@ -733,11 +733,11 @@ class Parser:
       other_type = self.factor()
       if op == 'and':
         if type.name != 'Boolean' or other_type.name != 'Boolean':
-          error('Can only use `and` on Boolean operands')
+          error('Can only use `and` on Boolean operands', self.line_no)
         self.emit_code(Op.AND)
       else:
         if type.name != 'Integer' or other_type.name != 'Integer': 
-          error('Can only use `%s` on Integer operands' % op)
+          error('Can only use `%s` on Integer operands' % op, self.line_no)
         if op == '*':
           self.emit_code(Op.MULTIPLY)
         elif op == 'div':
@@ -750,7 +750,7 @@ class Parser:
     if any(map(self.check, ['*', 'div', 'mod', 'and'])):
       self.next_symbol()
     else:
-      error('expected multiplying operator')
+      error('expected multiplying operator', self.line_no)
 
   def factor(self):
     '''
@@ -770,7 +770,7 @@ class Parser:
         self.emit_code(Op.VALUE, type.length())
         return type
       else:
-        error("Cannot find constant or variable named %s" % factor_name)
+        error("Cannot find constant or variable named %s" % factor_name, self.line_no)
     elif self.current_symbol in first('Numeral'):
       num = self.numeral()
       self.emit_code(Op.CONSTANT, num)
@@ -786,7 +786,7 @@ class Parser:
       self.emit_code(Op.NOT)
       return fact
     else:
-      error('Expected a constant, variable, parenthesized expression, or `not`; found %s' % current_symbol)
+      error('Expected a constant, variable, parenthesized expression, or `not`; found %s' % current_symbol, self.line_no)
 
   def name(self):
     self.expect('name')
@@ -829,10 +829,10 @@ class Parser:
       constant_name = self.name()
       constant = self.scope.get('const', constant_name)
       if constant is None:
-        error('Failed to find constant %s in scope' % constant_name)
+        error('Failed to find constant %s in scope' % constant_name, self.line_no)
       return constant.type, constant.value
     else:
-      error("Expecting a constant - either a Numeral or a named constant")
+      error("Expecting a constant - either a Numeral or a named constant", self.line_no)
       
   def parse(self):
     self.next_symbol()
