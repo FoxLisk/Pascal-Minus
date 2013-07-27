@@ -201,8 +201,8 @@ class Parser:
     self.current_symbol = None
     itype = self.scope.add_type('Integer', IntegerType())
     btype = self.scope.add_type('Boolean', BooleanType())
-    self.scope.add_const('False', btype, False)
-    self.scope.add_const('True', btype, True)
+    self.scope.add_const('False', btype, 0)
+    self.scope.add_const('True', btype, 1)
     self.scope.add_proc('Write', [Parameter('x', itype, False)], self.block_level, self.labeler.new_label())
     self.scope.add_proc('Read', [Parameter('x', itype, True)], self.block_level, self.labeler.new_label())
 
