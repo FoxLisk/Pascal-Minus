@@ -1,7 +1,7 @@
 import sys
 from administration_functions import reset, rewrite, close, debug, set_debug, prettify
 from errors import Errors
-from scanner import scan
+from scanner import Scanner
 from parser import parse
 from assembler import assemble
 from interpreter import interpret
@@ -18,7 +18,8 @@ def compile_pascal(source, dest, is_debug, is_interpret = False, out_stream = sy
   '''
   set_debug(is_debug)
   debug("Compiling %s into %s" % (source, dest))
-  tokens = scan(source)
+  scanner = Scanner(source)
+  tokens = scanner.scan()
   if output_tokens:
     write(tokens, source + "_tokenized")
   debug('scanning complete')

@@ -15,7 +15,7 @@ class CheatingStream:
 
 stream = CheatingStream()
 
-compile_pascal('cases/arithmetic.pm', 'dest', False, True, stream)
-#assert stream.val() == 'A', stream.val()
 compile_pascal('cases/write.pm', 'dest', False, True, stream)
-#assert stream.val() == 'AA', stream.val()
+assert stream.val() == 'AA', stream.val()
+compile_pascal('cases/arithmetic.pm', 'dest', False, True, stream)
+assert stream.val() == 'A', stream.val()
