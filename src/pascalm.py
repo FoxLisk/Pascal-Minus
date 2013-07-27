@@ -2,7 +2,7 @@ import sys
 from administration_functions import reset, rewrite, close, debug, set_debug, prettify
 from errors import Errors
 from scanner import Scanner
-from parser import parse
+from parser import Parser
 from assembler import assemble
 from interpreter import interpret
 
@@ -23,7 +23,8 @@ def compile_pascal(source, dest, is_debug, is_interpret = False, out_stream = sy
   if output_tokens:
     write(tokens, source + "_tokenized")
   debug('scanning complete')
-  bytecodes = parse(tokens)
+  parser = Parser(tokens)
+  bytecodes = parser.parse()
   if output_bytecodes:
     if is_debug:
       write(prettify(bytecodes), source + "_unassembled")
