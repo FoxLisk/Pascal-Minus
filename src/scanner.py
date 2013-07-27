@@ -151,10 +151,10 @@ class Scanner:
   def scan_less(self):
     #assume ch = '<'
     self.next_char()
-    if ch == '=':
+    if self.ch == '=':
       self.emit(symbols['<='])
       self.next_char()
-    elif ch == '>':
+    elif self.ch == '>':
       self.emit(symbols['<>'])
       self.next_char()
     else:
