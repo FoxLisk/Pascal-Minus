@@ -160,7 +160,7 @@ class Scope:
 
   def add_type(self, name, type):
     if name in self.scope['type']:
-      error('Cannot redefine type %s' % name,self.line_no)
+      error('Cannot redefine type %s' % name, self.line_no)
     self.scope['type'][name] = type
     return type
 
@@ -199,6 +199,7 @@ class Parser:
     self.block_level = 0
     self.bytecodes = []
     self.current_symbol = None
+    self.line_no = 0
     itype = self.scope.add_type('Integer', IntegerType())
     btype = self.scope.add_type('Boolean', BooleanType())
     self.scope.add_const('False', btype, 0)
