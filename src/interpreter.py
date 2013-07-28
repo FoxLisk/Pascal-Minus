@@ -61,17 +61,18 @@ class Interpreter:
     self.p += 3 #move program three blocks forward (variable instruction is VARIABLE, LEVEL, DISPL)
 
   def index(self, lower, upper, length, line_no):
-    #we'll have something like ARRAY_VAR_ADDR, 5, OP.INDEX meaning to take the 5th element from the array pointed to by ARRAY_VAR_ADDR
+    #we'll have something like ARRAY_VAR_ADDR, INDEX meaning to take the INDEXth element from the array pointed to by ARRAY_VAR_ADDR
     #length is the length of an element of the array, not the length of the array
     #so we want the top of the stack to be the ADDRESS of the 5th element of array_var_value
+    debug('length(lower: %d, upper: %d, length: %d)' % (lower, upper, length))
     i = self.store[self.s] #this is the index to dereference
     if i < lower or i > upper:
       error('Trying to dereference past the bounds of an array on line %d' % line_no)
     self.s -= 1
     #the address of the indexed variable is the displacement from the index (i - lower) times the length of an element
     #s() stores the address of the array to access currently, so we're replacing the location of the array with the location of the specific element
-    addr = self.s + (i - lower) * length 
-    self.set_store(addr, self.s)
+    addr = self.store[self.s] + ((i - lower) * length)
+    self.set_store(self.s, addr)
     self.p += 5
 
   def field(self, displ):
