@@ -43,3 +43,11 @@ compile_pascal('cases/deep_array.pm', 'dest', False, True, stream)
 assert stream.val() == 'A', stream.val()
 stream.reset()
 
+compile_pascal('cases/nested_record.pm', 'dest', False, True, stream)
+assert stream.val() == 'ABCD', stream.val()
+stream.reset()
+
+compile_pascal('cases/long_assign.pm', 'dest', False, True, stream)
+assert stream.val() == 'ABCDEFGHIJ', stream.val()
+stream.reset()
+
