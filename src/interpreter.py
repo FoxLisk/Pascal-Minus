@@ -1,5 +1,5 @@
 from copy import copy
-from administration_functions import get_code, debug, set_debug
+from administration_functions import get_code, debug, set_debug, debug_mode
 from bytecodes import Op, reverse_bytecodes, bytecodes
 import sys
 
@@ -269,11 +269,13 @@ class Interpreter:
         debug('-- %s' % reverse_bytecodes[op])
       except KeyError:
         debug('handling %s' % op)
-      stack = copy(self.store[self.code_length:])
-      disp_ptr = self.s - self.code_length
-      if 0 <= disp_ptr < len(stack):
-        stack[disp_ptr] = '*%d*' % stack[disp_ptr]
-      debug('STACK: ' + str(stack))
+
+      if debug_mode:
+        stack = copy(self.store[self.code_length:])
+        disp_ptr = self.s - self.code_length
+        if 0 <= disp_ptr < len(stack):
+          stack[disp_ptr] = '*%d*' % stack[disp_ptr]
+        debug('STACK: ' + str(stack))
       if op == Op.ADD:
         self.add()
       elif op == Op.AND:
