@@ -28,7 +28,8 @@ test_cases = [
   ('long_record_assign', 'ABC'),
   ('proc', 'A'),
   ('proc_vars', 'A'),
-  ('nested_proc', 'A')
+  ('nested_proc', 'A'),
+  ('recursion', 'ABCDEFGHIJK')
 ]
 
 errors = []
