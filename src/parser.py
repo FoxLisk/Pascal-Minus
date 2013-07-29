@@ -741,10 +741,10 @@ class Parser:
     return type
 
   def relational_operator(self):
-    if any(map(self.check, ['<', '=', '<=', '<>', '>='])):
+    if any(map(self.check, ['<', '=', '<=', '<>', '>=', '>'])):
       self.next_symbol()
     else:
-      error('expected relational operator', self.line_no)
+      error('expected relational operator; found %s' % self.current_symbol, self.line_no)
 
   def sign_operator(self):
     if self.check('+') or self.check('-'):
