@@ -55,3 +55,7 @@ compile_pascal('cases/long_record_assign.pm', 'dest', False, True, stream)
 assert stream.val() == 'ABC', stream.val()
 stream.reset()
 
+compile_pascal('cases/proc.pm', 'dest', False, True, stream)
+assert stream.val() == 'A', stream.val()
+stream.reset()
+

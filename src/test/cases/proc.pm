@@ -1,12 +1,8 @@
-program proctest;
-var gx, gy : Integer;
-procedure p(x : Integer; var y : Integer);
+program proc;
+procedure foo;
+  begin
+    Write(65)
+  end;
 begin
-  gy := 100;
-end;
-
-begin
-gx := 101;
-gy := 999;
-p(gx, gy)
+  foo;
 end.

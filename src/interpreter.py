@@ -140,26 +140,30 @@ class Interpreter:
     level is the number of levels back in the static link to follow
     displ is the displacement from p to the end of the proc call instruction (taking into account all the parameter lengths, etc)
     '''
-    debug('proc call: moving down %d levels of static chain' % level)
     self.s += 1
     #trace static link back to the base
+    log = 'Proc call: level %d displ %d ' % (level, displ)
     static_link = self.b
+    log += 'static link now %d ' % self.b
     while level > 0:
       static_link = self.store[static_link]
       level -= 1
+    log += 'set top of stack [static link] to %d ' % static_link
     self.set_store(self.s, static_link)
     self.set_store(self.s + 1, self.b) #store the current base address as the new dynamic link
-    self.set_store(self.s + 2, self.b + 3) #current program instruction + 3 as new return address (3 because the proc call instr, level, displ and its the one AFTER those.)
+    self.set_store(self.s + 2, self.p + 3) #current program instruction + 3 as new return address (3 because the proc call instr, level, displ and its the one AFTER those.)
+    debug(log)
     self.b = self.s
     self.s = self.b + 2
     self.p += displ
 
   def procedure(self, var_length, displ):
-    self.s += var_length #move top of stack past the variable part
+    self.s += var_length - 1 #move top of stack past the variable part
     self.p += displ #move the program pointer past displ (the number of instructions to invoke the proedure)
 
   def end_proc(self, param_length):
-    self.p = self.store[self.b + 2] #move p to the value stored in b() + 2, which is the return address
+    debug('ending proc call, returning to %d' % self.store[self.b + 2])
+    self.p = self.store[self.b + 2] #move p to the value stored in b + 2, which is the return address
     self.s = self.b #move the stack pointer back to b()
     self.s -= param_length + 1 #move the stack pointer back past all the params
     self.b += self.store[self.b + 1]
@@ -172,9 +176,7 @@ class Interpreter:
     self.p += displ
 
   def write(self):
-    debug('writing')
     val = self.store[self.s]
-    debug('val: %d chr: %s' % (val, chr(val)))
     self.out.write(chr(val))
     self.s -= 1
     self.p += 1

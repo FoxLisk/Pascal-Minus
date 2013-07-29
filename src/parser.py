@@ -319,7 +319,7 @@ class Parser:
     self.expect('procedure')
     proc_name = self.name()
     var_label = self.labeler.new_label()
-    proc_label = self.labeler.new_label()
+    begin_label = self.labeler.new_label()
     self.procedure_block(proc_name)
     self.expect(';')
 
@@ -329,17 +329,18 @@ class Parser:
       self.expect('(')
       params = self.formal_parameter_list()
       self.expect(')')
-    proc_label = self.labeler.new_label()
-    proc = self.scope.add_proc(proc_name, params, self.block_level, proc_label)
+    proc = self.scope.add_proc(proc_name, params, self.block_level, self.labeler.new_label())
     self.push_scope()
     self.parameter_addressing(params)
     for param in params:
       self.scope.add_param(param)
     self.expect(';')
     var_length_label = self.labeler.new_label()
-    begin_label = proc.label
-    self.emit_code(Op.PROCEDURE, var_length_label, proc_label)
-    self.block_body(var_length_label, begin_label)
+    #proc.label should be the address of the beginning of the procedure code
+    #that's what's passed in to block body so we use that here
+    self.emit_code(Op.PROCEDURE, var_length_label, proc.label)
+    #print "%s: var %d begin %d" % (proc_name, var_length_label, begin_label
+    self.block_body(var_length_label, proc.label)
 
     param_length = sum(map(lambda p: 1 if p.is_var_param else p.length(), params))
 
