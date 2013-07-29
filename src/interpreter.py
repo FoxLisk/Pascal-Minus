@@ -22,7 +22,7 @@ class Interpreter:
 
   def error(self, msg):
     print 'FATAL ERROR: STACK'
-    print self.store[code_length:]
+    print self.store[self.code_length:]
     raise Exception(msg)
 
   def set_store(self, loc, val):
@@ -35,7 +35,7 @@ class Interpreter:
       self.store.append(-1)
       diff -= 1
     if loc < self.code_length:
-      error('Trying to overwrite program instructions')
+      self.error('Trying to overwrite program instructions')
     #print 'setting store[%d] to %d' % (loc, val)
     self.store[loc] = val
 
@@ -150,8 +150,8 @@ class Interpreter:
     self.set_store(self.s, static_link)
     self.set_store(self.s + 1, self.b) #store the current base address as the new dynamic link
     self.set_store(self.s + 2, self.b + 3) #current program instruction + 3 as new return address (3 because the proc call instr, level, displ and its the one AFTER those.)
-    self.b = s
-    self.s = b + 2
+    self.b = self.s
+    self.s = self.b + 2
     self.p += displ
 
   def procedure(self, var_length, displ):
@@ -159,9 +159,9 @@ class Interpreter:
     self.p += displ #move the program pointer past displ (the number of instructions to invoke the proedure)
 
   def end_proc(self, param_length):
-    self.p = self.store[self.b + 2]#move p to the value stored in b() + 2, which is the return address
+    self.p = self.store[self.b + 2] #move p to the value stored in b() + 2, which is the return address
     self.s = self.b #move the stack pointer back to b()
-    self.s -= param_length + 1#move the stack pointer back past all the params
+    self.s -= param_length + 1 #move the stack pointer back past all the params
     self.b += self.store[self.b + 1]
 
   def program(self, var_length, displ):
@@ -272,7 +272,7 @@ class Interpreter:
       elif op == Op.DO:
         self.do(self.store[self.p + 1])
       elif op == Op.ENDPROC:
-        self.end_proc(p() + 1)
+        self.end_proc(self.p + 1)
       elif op == Op.ENDPROG:
         break
       elif op == Op.EQUAL:

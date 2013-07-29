@@ -45,6 +45,7 @@ class Assembler:
     address = 0
     while i < len(self.bytecodes):
       op = self.bytecodes[i]
+      #print 'handling opcode %s' % reverse_bytecodes[op]
       if op == Op.DEFADDR:
         label_no = self.bytecodes[i + 1]
         self.labels[label_no] = address
@@ -88,6 +89,7 @@ class Assembler:
         begin_label = self.pseudos_replaced[i + 2]
         var_length = self.labels[var_label]
         begin_displ = self.labels[begin_label] - i
+        debug('Handling block: var label %d, length %d | being label %d, displ %d' % (var_label, var_length, begin_label, begin_displ))
         self.assembled.append(op)
         self.assembled.append(var_length)
         self.assembled.append(begin_displ)

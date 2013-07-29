@@ -2,7 +2,7 @@ from errors import Errors
 from administration_functions import error
 from symbols import symbols, reverse_symbols
 from first import first
-from bytecodes import Op
+from bytecodes import Op, code_lengths, reverse_bytecodes
 
 class Labeler:
   def __init__(self):
@@ -151,7 +151,7 @@ class Scope:
     return self.parent.get(t, name)
 
   def is_var(self, name):
-    f = self.get('var', name)
+    f = self.scope.get('var', name)
     return f is not None
 
   def is_const(self, name):
@@ -220,6 +220,8 @@ class Parser:
     self.scope = self.scope.parent
 
   def emit_code(self, *args):
+    if len(args) <> code_lengths[args[0]]:
+      error('Error: wrong length of opcodes for instr %s' % reverse_bytecodes[args[0]])
     for arg in args:
       self.bytecodes.append(arg)
 
@@ -288,9 +290,9 @@ class Parser:
     self.expect('program')
     var_label = self.labeler.new_label()
     begin_label = self.labeler.new_label()
-    self.emit_code(Op.PROGRAM, var_label, begin_label)
     program_name = self.name()
     self.expect(';')
+    self.emit_code(Op.PROGRAM, var_label, begin_label)
     self.block_body(var_label, begin_label)
     self.expect('.')
     self.emit_code(Op.ENDPROG)
@@ -316,15 +318,19 @@ class Parser:
   def procedure_definition(self):
     self.expect('procedure')
     proc_name = self.name()
+    var_label = self.labeler.new_label()
+    proc_label = self.labeler.new_label()
     self.procedure_block(proc_name)
     self.expect(';')
 
   def procedure_block(self, proc_name):
+    params = []
     if self.check('('):
       self.expect('(')
       params = self.formal_parameter_list()
       self.expect(')')
-    proc = self.scope.add_proc(proc_name, params)
+    proc_label = self.labeler.new_label()
+    proc = self.scope.add_proc(proc_name, params, self.block_level, proc_label)
     self.push_scope()
     self.parameter_addressing(params)
     for param in params:
@@ -332,6 +338,7 @@ class Parser:
     self.expect(';')
     var_length_label = self.labeler.new_label()
     begin_label = proc.label
+    self.emit_code(Op.PROCEDURE, var_length_label, proc_label)
     self.block_body(var_length_label, begin_label)
 
     param_length = sum(map(lambda p: 1 if p.is_var_param else p.length(), params))
@@ -522,7 +529,7 @@ class Parser:
     elif proc.name == 'Read':
       error('Read not implemented', self.line_no)
     else:
-      self.emit_code(Op.PROCCALL, block_level - proc.level, proc.label)
+      self.emit_code(Op.PROCCALL, self.block_level - proc.level, proc.label)
 
   def actual_parameter_list(self, proc):
     '''
