@@ -67,7 +67,7 @@ class Interpreter:
     debug('length(lower: %d, upper: %d, length: %d)' % (lower, upper, length))
     i = self.store[self.s] #this is the index to dereference
     if i < lower or i > upper:
-      error('Trying to dereference past the bounds of an array on line %d' % line_no)
+      self.error('Trying to dereference past the bounds of an array on line %d' % line_no)
     self.s -= 1
     #the address of the indexed variable is the displacement from the index (i - lower) times the length of an element
     #s() stores the address of the array to access currently, so we're replacing the location of the array with the location of the specific element
@@ -104,12 +104,12 @@ class Interpreter:
     #s is pointing to the last value (out of total $length values) that we want to copy
     #so s - length is the address of the variable we're copying into
     #and s - length + 1 is the beginning of the values to copy
-    #after this we want the top of stack pointer to point at self.s - length + 1
+    #after this we want the top of stack pointer to point at self.s - length (we've consumed the var address)
     val_addr = self.s - length + 1
     var_addr = self.store[self.s - length]
     tmp = var_addr
     log = 'Assigning '
-    self.s = self.s - length + 1
+    self.s -= length + 1
     while length > 0: #so for each element in the var (possibly only the one) 
       log += str(self.store[val_addr]) + ' '
       self.set_store(var_addr, self.store[val_addr])
@@ -150,7 +150,6 @@ class Interpreter:
     while level > 0:
       static_link = self.store[static_link]
       level -= 1
-    log += 'set top of stack [static link] to %d ' % static_link
     self.set_store(self.s, static_link)
     self.set_store(self.s + 1, self.b) #store the current base address as the new dynamic link
     self.set_store(self.s + 2, self.p + 3) #current program instruction + 3 as new return address (3 because the proc call instr, level, displ and its the one AFTER those.)
@@ -160,15 +159,22 @@ class Interpreter:
     self.p += displ
 
   def procedure(self, var_length, displ):
-    self.s += var_length - 1 #move top of stack past the variable part
+    #self.s += var_length - 1 #move top of stack past the variable part
+    self.s += var_length
     self.p += displ #move the program pointer past displ (the number of instructions to invoke the proedure)
 
   def end_proc(self, param_length):
-    debug('ending proc call, returning to %d' % self.store[self.b + 2])
+    log = 'ending proc call, returning to instruction %d ' % self.store[self.b + 2]
+    if self.s - param_length != self.b + 2:
+      #TODO this check should occur once im sure how to get it right
+      #self.error('At end of procedure call stack should be empty')
+      pass
     self.p = self.store[self.b + 2] #move p to the value stored in b + 2, which is the return address
-    self.s = self.b #move the stack pointer back to b()
+    self.s = self.b #move the stack pointer back to b - b, when a proc call starts, points
+                    #to the new activation record (which is the top of the stack), so b
+                    #holds the top of the stack [after params were pushed] before the proc call
     self.s -= param_length + 1 #move the stack pointer back past all the params
-    self.b += self.store[self.b + 1]
+    self.b = self.store[self.b + 1]
 
   def program(self, var_length, displ):
     log = 'program var length = %d s before = %d ' % (var_length, self.s)
@@ -337,7 +343,7 @@ class Interpreter:
       elif op == Op.WRITE:
         self.write()
       else:
-        error('Unexpected opcode %d' % op)
+        self.error('Unexpected opcode %d' % op)
 
 if __name__ == '__main__':
   set_debug('-d' in sys.argv or '--debug' in sys.argv)
