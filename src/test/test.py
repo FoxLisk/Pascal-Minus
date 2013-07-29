@@ -15,47 +15,31 @@ class CheatingStream:
 
 stream = CheatingStream()
 
-compile_pascal('cases/write.pm', 'dest', False, True, stream)
-assert stream.val() == 'AA', stream.val()
-stream.reset()
+test_cases = [
+  ('write', 'AA'),
+  ('arithmetic', 'A'),
+  ('while', 'AAAAAAAAAAB'),
+  ('if', 'AD'),
+  ('array', 'A'),
+  ('record', 'AB'),
+  ('deep_array', 'A'),
+  ('nested_record', 'ABCD'),
+  ('long_assign', 'ABCDEFGHIJ'),
+  ('long_record_assign', 'ABC'),
+  ('proc', 'A'),
+  ('proc_vars', 'A')
+]
 
-compile_pascal('cases/arithmetic.pm', 'dest', False, True, stream)
-assert stream.val() == 'A', stream.val()
-stream.reset()
+errors = []
 
-compile_pascal('cases/while.pm', 'dest', False, True, stream)
-assert stream.val() == 'AAAAAAAAAAB', stream.val()
-stream.reset()
+for fn, expected in test_cases:
+  compile_pascal('cases/%s.pm' % fn, 'dest', False, True, stream)
+  if stream.val() != expected:
+    errors.append("Test case %s failed: Expected `%s`, found `%s`" % (fn, expected, stream.val()))
+  stream.reset()
 
-compile_pascal('cases/if.pm', 'dest', False, True, stream)
-assert stream.val() == 'AD', stream.val()
-stream.reset()
-
-compile_pascal('cases/array.pm', 'dest', False, True, stream)
-assert stream.val() == 'A', stream.val()
-stream.reset()
-
-compile_pascal('cases/record.pm', 'dest', False, True, stream)
-assert stream.val() == 'AB', stream.val()
-stream.reset()
-
-compile_pascal('cases/deep_array.pm', 'dest', False, True, stream)
-assert stream.val() == 'A', stream.val()
-stream.reset()
-
-compile_pascal('cases/nested_record.pm', 'dest', False, True, stream)
-assert stream.val() == 'ABCD', stream.val()
-stream.reset()
-
-compile_pascal('cases/long_assign.pm', 'dest', False, True, stream)
-assert stream.val() == 'ABCDEFGHIJ', stream.val()
-stream.reset()
-
-compile_pascal('cases/long_record_assign.pm', 'dest', False, True, stream)
-assert stream.val() == 'ABC', stream.val()
-stream.reset()
-
-compile_pascal('cases/proc.pm', 'dest', False, True, stream)
-assert stream.val() == 'A', stream.val()
-stream.reset()
+if len(errors) > 0:
+  print 'Found errors:'
+  for error in errors:
+    print error
 

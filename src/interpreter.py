@@ -32,7 +32,7 @@ class Interpreter:
     '''
     diff = loc - len(self.store) + 1 #0-based indexing
     while diff > 0:
-      self.store.append(-1)
+      self.store.append(-99999)
       diff -= 1
     if loc < self.code_length:
       self.error('Trying to overwrite program instructions')
@@ -88,9 +88,10 @@ class Interpreter:
     self.p += 2
 
   def value(self, length):
-    i = self.store[self.s] #the value in store(s()) is the address of the variable we want so i is now the location of the variable
-    #not moving s() because we just want to pop the address of the variable off and replace it with the value
+    i = self.store[self.s] #the value in store[s] is the address of the variable we want so i is now the location of the variable
+    #not moving s because we just want to pop the address of the variable off and replace it with the value
     while length > 0: #so for each element in the var (possibly only the one) 
+      debug('value: setting %d to %d' % (self.s, self.store[i]))
       self.set_store(self.s, self.store[i]) #we copy the value at i into the store
       self.s += 1
       i += 1 #and move the pointer from the source var forward
@@ -100,14 +101,15 @@ class Interpreter:
 
   def assign(self, length):
     #TODO this is probably broken
-    #s() is pointing to the last value (out of total $length values) that we want to copy
-    #so s() - length is the address of the variable we're copying into
-    #and s() - length + 1 is the beginning of the values to copy
+    #s is pointing to the last value (out of total $length values) that we want to copy
+    #so s - length is the address of the variable we're copying into
+    #and s - length + 1 is the beginning of the values to copy
+    #after this we want the top of stack pointer to point at self.s - length + 1
     val_addr = self.s - length + 1
     var_addr = self.store[self.s - length]
     tmp = var_addr
     log = 'Assigning '
-    self.s -= length + 1
+    self.s = self.s - length + 1
     while length > 0: #so for each element in the var (possibly only the one) 
       log += str(self.store[val_addr]) + ' '
       self.set_store(var_addr, self.store[val_addr])
@@ -261,6 +263,11 @@ class Interpreter:
         debug('-- %s' % reverse_bytecodes[op])
       except KeyError:
         debug('handling %s' % op)
+      stack = copy(self.store[self.code_length:])
+      disp_ptr = self.s - self.code_length
+      if 0 <= disp_ptr < len(stack):
+        stack[disp_ptr] = '*%d*' % stack[disp_ptr]
+      debug('STACK: ' + str(stack))
       if op == Op.ADD:
         self.add()
       elif op == Op.AND:
