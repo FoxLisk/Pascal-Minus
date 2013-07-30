@@ -476,8 +476,13 @@ class Parser:
     if var is None:
       error('Cannot assign to missing var %s' % var_name, self.line_no)
     level = self.block_level - var.level
-    op = Op.VARPARAM if var.is_var_param else Op.VARIABLE
-    self.emit_code(op, level, var.displ)
+    if var.is_var_param:
+      self.emit_code(Op.VARPARAM, level, var.displ)
+    else:
+      if level == 0:
+        self.emit_code(Op.LOCALVAR, var.displ)
+      else:
+        self.emit_code(Op.VARIABLE, level, var.displ)
     type = var.type
 
     while self.current_symbol in first('Selector'):

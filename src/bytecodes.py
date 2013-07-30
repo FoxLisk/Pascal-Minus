@@ -13,6 +13,7 @@ class Op:
   GREATER = 12
   INDEX = 13
   LESS = 14
+  LOCALVAR = 34
   MINUS = 15
   MODULO = 16
   MULTIPLY = 17
@@ -66,7 +67,8 @@ reverse_bytecodes = {
   30: 'READ',
   31: 'WRITE',
   32: 'DEFADDR',
-  33: 'DEFARG'
+  33: 'DEFARG',
+  34: 'LOCALVAR'
 }
 
 bytecodes = {y:x for x, y in reverse_bytecodes.items()}
@@ -106,4 +108,5 @@ code_lengths = {
   Op.VARPARAM: 3,
   Op.READ: 1,
   Op.WRITE: 1,
+  Op.LOCALVAR: 2 #op displ
 }

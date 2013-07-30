@@ -36,6 +36,7 @@ class Interpreter:
 
     #This check should really be left in for safety but assuming the interpreter is bug-free (hah hah hah)
     #it's actually safe to leave it out
+    #saves about half a second per 7 million calls (non-trivial actually)
     #if loc < self.code_length:
       #self.error('Trying to overwrite program instructions')
     #print 'setting store[%d] to %d' % (loc, val)
@@ -50,6 +51,12 @@ class Interpreter:
     #debug('storing var location of %d at top of stack %d' % (x + displ, self.s))
     self.set_store(self.s, x + displ) #set the top of the stack to the address of the sought variable
     self.p += 3 #move program three blocks forward (variable instruction is VARIABLE, LEVEL, DISPL)
+
+  def local_var(self, displ):
+    self.s += 1
+    #debug('storing var location of %d at top of stack %d' % (x + displ, self.s))
+    self.set_store(self.s, self.b + displ) #set the top of the stack to the address of the sought variable
+    self.p += 2 #move program three blocks forward (variable instruction is VARIABLE, LEVEL, DISPL)
 
   def var_param(self, level, displ):
     self.s += 1
@@ -212,7 +219,10 @@ class Interpreter:
     self.p += 1
 
   def add(self):
-    self.binary_op(lambda x, y: x + y)
+    self.s -= 1
+    self.set_store(self.s, self.store[self.s] + self.store[self.s + 1])
+    self.p += 1
+    #self.binary_op(lambda x, y: x + y)
 
   def multiply(self):
     self.binary_op(lambda x, y: x * y)
@@ -230,7 +240,9 @@ class Interpreter:
     self.binary_op(lambda x, y: y == 1 if x == 0 else 1)
 
   def lt(self):
-    self.binary_op(lambda x, y: 1 if x < y else 0)
+    self.s -= 1
+    self.set_store(self.s, 1 if self.store[self.s] < self.store[self.s + 1] else 0)
+    self.p += 1
 
   def lte(self):
     self.binary_op(lambda x, y: 1 if x <= y else 0)
@@ -242,7 +254,9 @@ class Interpreter:
     self.binary_op(lambda x, y: 1 if x >= y else 0)
 
   def gt(self):
-    self.binary_op(lambda x, y: 1 if x > y else 0)
+    self.s -= 1
+    self.set_store(self.s, 1 if self.store[self.s] > self.store[self.s + 1] else 0)
+    self.p += 1
 
   def ne(self):
     self.binary_op(lambda x, y: 1 if x != y else 0)
@@ -264,10 +278,13 @@ class Interpreter:
 
   def interpret(self):
     while True:
+      op = self.store[self.p]
+      '''
       try:
         op = int(self.store[self.p])
       except ValueError:
         op = bytecodes[self.store[self.p]]
+        '''
       try:
         #debug('-- %s' % reverse_bytecodes[op])
         pass
@@ -310,6 +327,8 @@ class Interpreter:
         self.index(self.store[p + 1],self.store[p + 2], self.store[p + 3], self.store[p + 4])
       elif op == Op.LESS:
         self.lt()
+      elif op == Op.LOCALVAR:
+        self.local_var(self.store[self.p + 1])
       elif op == Op.MINUS:
         self.minus()
       elif op == Op.MODULO:

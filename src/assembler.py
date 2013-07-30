@@ -15,6 +15,7 @@ skip_codes = {
   Op.GREATER,
   Op.INDEX,
   Op.LESS,
+  Op.LOCALVAR,
   Op.MINUS,
   Op.MODULO,
   Op.MULTIPLY,
