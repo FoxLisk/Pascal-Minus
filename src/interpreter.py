@@ -126,7 +126,6 @@ class Interpreter:
     #after this we want the top of stack pointer to point at self.s - length (we've consumed the var address)
     val_addr = self.s - length + 1
     var_addr = self.store[self.s - length]
-    tmp = var_addr
     self.s -= length + 1
     while length > 0: #so for each element in the var (possibly only the one) 
       self.set_store(var_addr, self.store[val_addr])

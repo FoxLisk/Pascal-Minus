@@ -1,4 +1,5 @@
 from pascalm import compile_pascal
+import subprocess
 
 class CheatingStream:
   def __init__(self):
@@ -32,7 +33,10 @@ test_cases = [
   ('recursion', 'ABCDEFGHIJK')
 ]
 
+subprocess.call(['gcc', '../interpreter.c', '-std=c99', '-Wall', '-pedantic', '-o', 'pascalvm'])
+
 errors = []
+c_errors = []
 
 for fn, expected in test_cases:
   '''
@@ -41,9 +45,13 @@ for fn, expected in test_cases:
     errors.append("Test case %s failed: Expected `%s`, found `%s`" % (fn, expected, stream.val()))
     '''
   try: 
-    compile_pascal('cases/%s.pm' % fn, 'dest', False, True, stream)
+    compile_pascal('cases/%s.pm' % fn, 'dest', is_interpret = True, out_stream = stream)
     if stream.val() != expected:
       errors.append("Test case %s failed: Expected `%s`, found `%s`" % (fn, expected, stream.val()))
+
+    output = subprocess.check_output(['./pascalvm', 'dest']);
+    if output != expected:
+      c_errors.append("Test case %s failed: Expected `%s`, found `%s`" % (fn, expected, output))
   except Exception as e:
     errors.append('Caught exception in test case %s:\n  %s' % (fn, e.message))
   stream.reset()
@@ -51,5 +59,10 @@ for fn, expected in test_cases:
 if len(errors) > 0:
   print 'Found errors:'
   for error in errors:
+    print error
+
+if len(c_errors) > 0:
+  print 'Found errors in the C vm:'
+  for error in c_errors:
     print error
 

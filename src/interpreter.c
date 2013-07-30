@@ -6,13 +6,59 @@ typedef int bool;
 #define true 1
 #define false 0
 
+//#define DEBUG
+
+#define OP_ADD 1
+#define OP_AND 2
+#define OP_ASSIGN 3
+#define OP_CONSTANT 4
+#define OP_DIVIDE 5
+#define OP_DO 6
+#define OP_ENDPROC 7
+#define OP_ENDPROG 8
+#define OP_EQUAL 9
+#define OP_FIELD 10
+#define OP_GOTO 11
+#define OP_GREATER 12
+#define OP_INDEX 13
+#define OP_LESS 14
+#define OP_LOCALVAR 34
+#define OP_MINUS 15
+#define OP_MODULO 16
+#define OP_MULTIPLY 17
+#define OP_NOT 18
+#define OP_NOTEQUAL 19
+#define OP_NOTGREATER 20
+#define OP_NOTLESS 21
+#define OP_OR 22
+#define OP_PROCCALL 23
+#define OP_PROCEDURE 24
+#define OP_PROGRAM 25
+#define OP_SUBTRACT 26
+#define OP_VALUE 27
+#define OP_SHORTVALUE 35
+#define OP_VARIABLE 28
+#define OP_VARPARAM 29
+#define OP_READ 30
+#define OP_WRITE 31
+#define OP_DEFADDR 32
+#define OP_DEFARG 33
+
+#define STACK_SIZE 1000000
+
 typedef struct {
   int* opcodes;
   int length;
 } code;
 
-bool get_code(char* const file_name, code* out) {
-  int code_size = 100;
+int p = 0, b = 0;
+int s = 3;
+int* stack;
+code program;
+bool running = true;
+
+bool get_code(char* const file_name) {
+  int code_size = 1000;
   int* code = (int*) malloc(code_size * sizeof(int));
   int code_length = 0;
 
@@ -21,7 +67,7 @@ bool get_code(char* const file_name, code* out) {
     if (code_length == code_size) {
       int new_size = code_size * 2;
       int* new_code = (int*) malloc(new_size * sizeof(int));
-      memcpy(new_code, code, code_size);
+      memcpy(new_code, code, code_length * sizeof(int));
       code = new_code;
       code_size = new_size;
     }
@@ -38,19 +84,420 @@ bool get_code(char* const file_name, code* out) {
   fclose(fp);
 
   int* final_code = (int*) malloc(code_length * sizeof(int));
-  memcpy(final_code, code, code_length);
+  memcpy(final_code, code, code_length * sizeof(int));
 
-  out->opcodes = final_code;
-  out->length = code_length;
+  program.opcodes = final_code;
+  program.length = code_length;
   return true;
 }
 
+void error(char* const msg) {
+  printf("%s\n", msg);
+  running = false;
+}
+
+void add() {
+  s--;
+  stack[s] = stack[s] + stack[s + 1];
+  p++;
+}
+
+void and() {
+  s--;
+  if (stack[s] == 1) {
+    stack[s] = stack[s + 1] == 1;
+  } else {
+    stack[s] = 0;
+  }
+  p++;
+}
+
+void divide() {
+  s--;
+  stack[s] = stack[s] / stack[s + 1];
+  p++;
+}
+
+void equal() {
+  s--;
+  stack[s] = stack[s] == stack[s + 1] ? 1 : 0;
+  p++;
+}
+
+void greater() {
+  s--;
+  stack[s] = stack[s] > stack[s + 1] ? 1 : 0;
+  p++;
+}
+
+void less() {
+  s--;
+  stack[s] = stack[s] < stack[s + 1] ? 1 : 0;
+  p++;
+}
+
+void minus() {
+  stack[s] = -stack[s];
+  p++;
+}
+
+void modulo() {
+  s--;
+  stack[s] = stack[s] % stack[s + 1];
+  p++;
+}
+
+void multiply() {
+  s--;
+  stack[s] = stack[s] * stack[s + 1];
+  p++;
+}
+
+void not() {
+  stack[s] = stack[s] == true ? false : true;
+  p++;
+}
+
+void notequal() {
+  s--;
+  stack[s] = stack[s] != stack[s + 1] ? 1 : 0;
+  p++;
+}
+
+void lte() {
+  s--;
+  stack[s] = stack[s] > stack[s + 1] ? 0 : 1;
+  p++;
+}
+
+void gte() {
+  s--;
+  stack[s] = stack[s] < stack[s + 1] ? 0 : 1;
+  p++;
+}
+
+void or() {
+  s--;
+  if (stack[s] == 0) {
+    stack[s] = stack[s + 1] == 1;
+  } else {
+    stack[s] = 1;
+  }
+  p++;
+}
+
+void shortvalue() {
+  int var_addr = stack[s];
+  stack[s] = stack[var_addr];
+  p++;
+}
+
+void subtract() {
+  s--;
+  stack[s] = stack[s] - stack[s + 1];
+  p++;
+}
+
+void read() {
+  printf("Error: read not implemented, undefined behaviour\n");
+  s--;
+  //stack[s] = stack[s] + stack[s + 1];
+  p++;
+}
+
+void write() {
+  putc(stack[s], stdout);
+  s--;
+  p++;
+}
+
+//two-arg
+void assign(int length) {
+  int val_addr = s - length + 1;
+  int var_addr = stack[s - length];
+  s -= length + 1;
+  while (length > 0) {
+    stack[var_addr] = stack[val_addr];
+    var_addr++;
+    val_addr++;
+    length--;
+  }
+  p += 2;
+} 
+
+void constant(int val) {
+  s++;
+  stack[s] = val;
+  p += 2;
+} 
+
+void _do(int displ) {
+  if (stack[s] == 1) {
+    p += 2;
+  } else {
+    p += displ;
+  }
+} 
+
+void endproc(int param_length) {
+  p = stack[b + 2];
+  s = b;
+  s -= param_length + 1;
+  b = stack[b + 1];
+}
+
+void field(int displ) {
+  stack[s] = stack[s] + displ;
+  p += 2;
+}
+
+void _goto(int displ) {
+  p += displ;
+}
+
+void localvar(int displ) {
+  s++;
+  stack[s] = b + displ; //top of stack to var address (level = 0)
+  p += 2;
+}
+
+void value(int length) {
+  int i = stack[s];
+  while (length > 0) {
+    stack[s] = stack[i];
+    s++;
+    i++;
+    length--;
+  }
+  s--;
+  p += 2;
+}
+
+void _index(int lower, int upper, int length, int line_no) {
+  int i = stack[s];
+  if (i < lower || i > upper) {
+    char errmsg[60];
+    sprintf(errmsg, "Trying to determine past the bounds of an array on line %d", line_no);
+    error(errmsg);
+  }
+  s--;
+  int addr = stack[s] + ((i - lower) * length); //length is element lenth
+  stack[s] = addr;
+  p += 5;
+}
+
+void proccall(int level, int displ) {
+  s++;
+  int static_link = b;
+  while (level > 0) {
+    static_link = stack[static_link];
+    level--;
+  }
+  stack[s] = static_link;
+  stack[s + 1] = b;
+  stack[s + 2] = p + 3;
+  b = s;
+  s = b + 2;
+  p += displ;
+}
+
+void _program(int var_length, int displ) {
+  s += var_length - 1;
+  p += displ;
+}
+
+void procedure(int var_length, int displ) {
+  s += var_length;
+  p += displ;
+}
+
+void variable(int level, int displ) {
+  s++;
+  int x = b;
+  while (level > 0) {
+    x = stack[s];
+    level--;
+  }
+  stack[s] = x + displ;
+  p += 3;
+}
+
+void varparam(int level, int displ) {
+  s++;
+  int x = b;
+  while (level > 0) {
+    x = stack[x];
+    level--;
+  }
+  int var_loc = stack[x + displ];
+  stack[s] = var_loc;
+  p += 3;
+}
+
 bool interpret(char* const file_name, bool debug) {
-  code* program = malloc(sizeof(code));
-  bool success = get_code(file_name, program);
+  bool success = get_code(file_name);
   if (!success) {
     return false;
   }
+
+  stack = (int*) malloc(STACK_SIZE * sizeof(int));
+#ifdef DEBUG
+  printf("successfully loaded code\n");
+  char *names[] = {
+    "UNDEFINED", 
+    "ADD",
+    "AND",
+    "ASSIGN",
+    "CONSTANT",
+    "DIVIDE",
+    "DO",
+    "ENDPROC",
+    "ENDPROG",
+    "EQUAL",
+    "FIELD",
+    "GOTO",
+    "GREATER",
+    "INDEX",
+    "LESS",
+    "MINUS",
+    "MODULO",
+    "MULTIPLY",
+    "NOT",
+    "NOTEQUAL",
+    "NOTGREATER",
+    "NOTLESS",
+    "OR",
+    "PROCCALL",
+    "PROCEDURE",
+    "PROGRAM",
+    "SUBTRACT",
+    "VALUE",
+    "VARIABLE",
+    "VARPARAM",
+    "READ",
+    "WRITE",
+    "DEFADDR",
+    "DEFARG",
+    "LOCALVAR",
+    "SHORTVALUE"
+  };
+#endif
+
+  while (running) {
+    int op = program.opcodes[p];
+#ifdef DEBUG
+    printf("Handling %s [%d]\n", names[op], op);
+    printf("Stack before: ");
+    for (int i = 0; i <= s; i++) {
+      printf("%d ", stack[i]);
+    }
+    printf("\n");
+#endif
+    switch(op) {
+      case OP_ADD:
+        add();
+        break;
+      case OP_AND:
+        and();
+        break;
+      case OP_DIVIDE:
+        divide();
+        break;
+      case OP_EQUAL:
+        equal();
+        break;
+      case OP_GREATER:
+        greater();
+        break;
+      case OP_LESS:
+        less();
+        break;
+      case OP_MINUS:
+        minus();
+        break;
+      case OP_MODULO:
+        modulo();
+        break;
+      case OP_MULTIPLY:
+        multiply();
+        break;
+      case OP_NOT:
+        not();
+        break;
+      case OP_NOTEQUAL:
+        notequal();
+        break;
+      case OP_NOTGREATER:
+        lte();
+        break;
+      case OP_NOTLESS:
+        gte();
+        break;
+      case OP_OR:
+        or();
+        break;
+      case OP_SHORTVALUE:
+        shortvalue();
+        break;
+      case OP_SUBTRACT:
+        subtract();
+        break;
+      case OP_READ:
+        read();
+        break;
+      case OP_WRITE:
+        write();
+        break;
+      //end no-arg ops
+      case OP_ASSIGN:
+        assign(program.opcodes[p+1]);
+        break;
+      case OP_CONSTANT:
+        constant(program.opcodes[p+1]);
+        break;
+      case OP_DO:
+        _do(program.opcodes[p+1]);
+        break;
+      case OP_ENDPROC:
+        endproc(program.opcodes[p+1]);
+        break;
+      case OP_FIELD:
+        field(program.opcodes[p+1]);
+        break;
+      case OP_GOTO:
+        _goto(program.opcodes[p+1]);
+        break;
+      case OP_LOCALVAR:
+        localvar(program.opcodes[p+1]);
+        break;
+      case OP_VALUE:
+        assign(program.opcodes[p+1]);
+        break;
+      //end one-arg opts
+      case OP_INDEX:
+        _index(program.opcodes[p+1], program.opcodes[p+2], program.opcodes[p+3], program.opcodes[p+4]);
+        break;
+      case OP_PROCCALL:
+        proccall(program.opcodes[p+1], program.opcodes[p+2]);
+        break;
+      case OP_PROCEDURE:
+        procedure(program.opcodes[p+1], program.opcodes[p+2]);
+        break;
+      case OP_PROGRAM:
+        _program(program.opcodes[p+1], program.opcodes[p+2]);
+        break;
+      case OP_VARIABLE:
+        variable(program.opcodes[p+1], program.opcodes[p+2]);
+        break;
+      case OP_VARPARAM:
+        varparam(program.opcodes[p+1], program.opcodes[p+2]);
+        break;
+      case OP_ENDPROG:
+        running = false;
+        break;
+    }
+  }
+  return true;
 }
 
 int main(int argc, char* argv[]) {
@@ -62,360 +509,7 @@ int main(int argc, char* argv[]) {
   }
 
   char* file_name = argv[1];
-  interpret(file_name, debug);
+  if (!interpret(file_name, debug)) {
+    printf("Error interpreting `%s`", file_name);
+  }
 }
-
-/*
-class Interpreter:
-  def __init__(self, out, filename = None, code = None, stack_size = 1000000):
-    if (filename is None) == (code is None):
-      raise Exception("Must pass in a filename XOR a list of bytecodes")
-    if filename is not None:
-      self.code = get_code(filename)
-    else:
-      self.code = copy(code)
-    self.p = 0
-    self.b = 0
-    self.s = 3
-    self.out = out
-
-    self.stack_size = stack_size
-    self.store = [-99999] * stack_size
-
-  def error(self, msg):
-    print 'FATAL ERROR: STACK'
-    print self.store
-    raise Exception(msg)
-
-  def set_store(self, loc, val):
-    '''
-    use this to set values in the stack instead of doing it manually, it handles
-    resizing & mis-addressing for you
-    '''
-    '''
-    diff = loc - len(self.store) + 1 #0-based indexing
-    if diff > 0:
-      self.store.extend([-99999] * diff)
-    '''
-    if loc > self.stack_size:
-      self.error('Out of stack space')
-
-    #This check should really be left in for safety but assuming the interpreter is bug-free (hah hah hah)
-    #it's actually safe to leave it out
-    #saves about half a second per 7 million calls (non-trivial actually)
-    #if loc < self.code_length:
-      #self.error('Trying to overwrite program instructions')
-    #print 'setting store[%d] to %d' % (loc, val)
-    self.store[loc] = val
-
-  def variable(self, level, displ):
-    self.s += 1
-    x = self.b
-    while level > 0: #move through the static links as many levels as necessary to find the variable in the correct stack frame
-      x = self.store[x]
-      level -= 1
-    #debug('storing var location of %d at top of stack %d' % (x + displ, self.s))
-    self.set_store(self.s, x + displ) #set the top of the stack to the address of the sought variable
-    self.p += 3 #move program three blocks forward (variable instruction is VARIABLE, LEVEL, DISPL)
-
-  def local_var(self, displ):
-    self.s += 1
-    #debug('storing var location of %d at top of stack %d' % (x + displ, self.s))
-    self.set_store(self.s, self.b + displ) #set the top of the stack to the address of the sought variable
-    self.p += 2 #move program three blocks forward (variable instruction is VARIABLE, LEVEL, DISPL)
-
-  def var_param(self, level, displ):
-    self.s += 1
-    x = self.b
-    while level > 0: #move through the static links as many levels as necessary to find the variable in the correct stack frame
-      x = self.store[x]
-      level -= 1
-    var_loc = self.store[x + displ] #we need to grab the location of the variable that was passed in as a parameter
-    #debug('found var param at %d' % var_loc)
-    self.set_store(self.s, var_loc)
-    self.p += 3 #move program three blocks forward (variable instruction is VARIABLE, LEVEL, DISPL)
-
-  def index(self, lower, upper, length, line_no):
-    #we'll have something like ARRAY_VAR_ADDR, INDEX meaning to take the INDEXth element from the array pointed to by ARRAY_VAR_ADDR
-    #length is the length of an element of the array, not the length of the array
-    #so we want the top of the stack to be the ADDRESS of the 5th element of array_var_value
-    #debug('length(lower: %d, upper: %d, length: %d)' % (lower, upper, length))
-    i = self.store[self.s] #this is the index to dereference
-    if i < lower or i > upper:
-      self.error('Trying to dereference past the bounds of an array on line %d' % line_no)
-    self.s -= 1
-    #the address of the indexed variable is the displacement from the index (i - lower) times the length of an element
-    #s() stores the address of the array to access currently, so we're replacing the location of the array with the location of the specific element
-    addr = self.store[self.s] + ((i - lower) * length)
-    self.set_store(self.s, addr)
-    self.p += 5
-
-  def field(self, displ):
-    #the displ is the distance from the start of a record to the element we need, which makes this very simple
-    #the complicated part is the code emission part :D
-    self.set_store(self.s, self.store[self.s] + displ)
-    self.p += 2
-
-  def constant(self, val):
-    #print 'Pushing constant %d' % val
-    self.s += 1
-    self.set_store(self.s, val)
-    self.p += 2
-
-  def value(self, length):
-    i = self.store[self.s] #the value in store[s] is the address of the variable we want so i is now the location of the variable
-    #not moving s because we just want to pop the address of the variable off and replace it with the value
-    while length > 0: #so for each element in the var (possibly only the one) 
-      self.set_store(self.s, self.store[i]) #we copy the value at i into the store
-      self.s += 1
-      i += 1 #and move the pointer from the source var forward
-      length -= 1
-    self.s -= 1 #in the loop we moved one word past the end of the actual value
-    self.p += 2
-
-  def short_value(self):
-    i = self.store[self.s] #the value in store[s] is the address of the variable we want so i is now the location of the variable
-    #not moving s because we just want to pop the address of the variable off and replace it with the value
-    self.set_store(self.s, self.store[i]) #we copy the value at i into the store
-    self.p += 1
-
-  def assign(self, length):
-    #TODO this is probably broken
-    #s is pointing to the last value (out of total $length values) that we want to copy
-    #so s - length is the address of the variable we're copying into
-    #and s - length + 1 is the beginning of the values to copy
-    #after this we want the top of stack pointer to point at self.s - length (we've consumed the var address)
-    val_addr = self.s - length + 1
-    var_addr = self.store[self.s - length]
-    tmp = var_addr
-    self.s -= length + 1
-    while length > 0: #so for each element in the var (possibly only the one) 
-      self.set_store(var_addr, self.store[val_addr])
-      var_addr += 1
-      val_addr += 1
-      length -= 1
-    self.p += 2
-
-  def goto(self, displ):
-    self.p += displ
-
-  def do(self, displ):
-    if self.store[self.s] == 1: #store[s] is the result of whatever expression we're evaluating
-      self.p += 2 #move past the DO, DISPL instruction into the loop body
-    else:
-      self.p += displ #jump to the end of the body
-
-  '''
-  #if statements like if B then S1 [else S2] compiles into: B DO(L1) S1 GOTO(L2) L1: S2, L2
-  #basically just a do loop with an unconditional break at the end
-  #thus no def if()
-  '''
-
-  def proc_call(self, level, displ):
-    '''
-    level is the number of levels back in the static link to follow
-    displ is the displacement from p to the end of the proc call instruction (taking into account all the parameter lengths, etc)
-    '''
-    self.s += 1
-    #trace static link back to the base
-    log = 'Proc call: level %d displ %d ' % (level, displ)
-    static_link = self.b
-    log += 'static link now %d ' % self.b
-    while level > 0:
-      static_link = self.store[static_link]
-      level -= 1
-    self.set_store(self.s, static_link)
-    self.set_store(self.s + 1, self.b) #store the current base address as the new dynamic link
-    self.set_store(self.s + 2, self.p + 3) #current program instruction + 3 as new return address (3 because the proc call instr, level, displ and its the one AFTER those.)
-    #debug(log)
-    self.b = self.s
-    self.s = self.b + 2
-    self.p += displ
-
-  def procedure(self, var_length, displ):
-    #self.s += var_length - 1 #move top of stack past the variable part
-    self.s += var_length
-    self.p += displ #move the program pointer past displ (the number of instructions to invoke the proedure)
-
-  def end_proc(self, param_length):
-    log = 'ending proc call, returning to instruction %d ' % self.store[self.b + 2]
-    if self.s - param_length != self.b + 2:
-      #TODO this check should occur once im sure how to get it right
-      #self.error('At end of procedure call stack should be empty')
-      pass
-    self.p = self.store[self.b + 2] #move p to the value stored in b + 2, which is the return address
-    self.s = self.b #move the stack pointer back to b - b, when a proc call starts, points
-                    #to the new activation record (which is the top of the stack), so b
-                    #holds the top of the stack [after params were pushed] before the proc call
-    self.s -= param_length + 1 #move the stack pointer back past all the params
-    self.b = self.store[self.b + 1]
-
-  def program(self, var_length, displ):
-    log = 'program var length = %d s before = %d ' % (var_length, self.s)
-    self.s += var_length - 1 #functions that need to a free stack space will push it forward themselves, so we can actually just move it forward to point at the last variable
-    log += 's after = %d' % self.s
-    #debug(log)
-    self.p += displ
-
-  def write(self):
-    val = self.store[self.s]
-    self.out.write(chr(val))
-    self.s -= 1
-    self.p += 1
-        
-  def read(self):
-    #address of the variable is the top of the stack
-    var_addr = self.store[s]
-    self.set_store(var_addr, int(raw_input()))
-    self.s -= 1
-    self.p += 1
-
-  #######
-  # BINARY OPERATIONS
-  #######
-
-  def binary_op(self, operation):
-    #TODO very slow
-    self.s -= 1
-    x = self.store[self.s]
-    y = self.store[self.s + 1]
-    self.set_store(self.s, operation(x, y))
-    #debug('storing %d at top of stack' % operation(x, y))
-    self.p += 1
-
-  def add(self):
-    self.s -= 1
-    self.set_store(self.s, self.store[self.s] + self.store[self.s + 1])
-    self.p += 1
-
-  def divide(self):
-    self.binary_op(lambda x, y: x / y)
-
-  def multiply(self):
-    self.binary_op(lambda x, y: x * y)
-
-  def subtract(self):
-    self.binary_op(lambda x, y: x - y)
-
-  def mod(self):
-    self.binary_op(lambda x, y: x % y)
-
-  def log_and(self):
-    self.binary_op(lambda x, y: y == 1 if x == 1 else 0)
-
-  def log_or(self):
-    self.binary_op(lambda x, y: y == 1 if x == 0 else 1)
-
-  def lt(self):
-    self.s -= 1
-    self.set_store(self.s, 1 if self.store[self.s] < self.store[self.s + 1] else 0)
-    self.p += 1
-
-  def lte(self):
-    self.binary_op(lambda x, y: 1 if x <= y else 0)
-
-  def eq(self):
-    self.binary_op(lambda x, y: 1 if x == y else 0)
-
-  def gte(self):
-    self.binary_op(lambda x, y: 1 if x >= y else 0)
-
-  def gt(self):
-    self.s -= 1
-    self.set_store(self.s, 1 if self.store[self.s] > self.store[self.s + 1] else 0)
-    self.p += 1
-
-  def ne(self):
-    self.binary_op(lambda x, y: 1 if x != y else 0)
-
-  ######
-  # UNARY OPERATIONS
-  ######
-
-  def unary_op(self, operation):
-    x = self.store[self.s]
-    self.set_store(self.s, operation(x))
-    self.p += 1
-
-  def log_not(self):
-    self.unary_op(lambda x: 1 if x == 0 else 0)
-
-  def minus(self):
-    self.unary_op(lambda x: -x)
-
-  def interpret(self):
-    no_arg = {
-      Op.ADD: self.add,
-      Op.AND: self.log_and,
-      Op.DIVIDE: self.divide,
-      Op.EQUAL: self.eq,
-      Op.GREATER: self.gt,
-      Op.LESS: self.lt,
-      Op.MINUS: self.minus,
-      Op.MODULO: self.mod,
-      Op.MULTIPLY: self.multiply,
-      Op.NOT: self.log_not,
-      Op.NOTEQUAL: self.ne,
-      Op.NOTGREATER: self.lte,
-      Op.NOTLESS: self.gte,
-      Op.OR: self.log_or,
-      Op.SHORTVALUE: self.short_value,
-      Op.SUBTRACT: self.subtract,
-      Op.READ: self.read,
-      Op.WRITE: self.write
-    }
-
-    one_arg = {
-      Op.ASSIGN: self.assign,
-      Op.CONSTANT: self.constant,
-      Op.DO: self.do,
-      Op.ENDPROC: self.end_proc,
-      Op.FIELD: self.field,
-      Op.GOTO: self.goto,
-      Op.LOCALVAR: self.local_var,
-      Op.VALUE: self.value
-    }
-
-    code = self.code
-    while True:
-      op = code[self.p]
-      '''
-      try:
-        debug('-- %s' % reverse_bytecodes[op])
-      except KeyError:
-        debug('handling %s' % op)
-
-      if debug_mode:
-        stack = copy(code[self.code_length:])
-        disp_ptr = self.s - self.code_length
-        if 0 <= disp_ptr < len(stack):
-          stack[disp_ptr] = '*%d*' % stack[disp_ptr]
-        debug('STACK: ' + str(stack))
-      '''
-      if op in no_arg:
-        no_arg[op]()
-      elif op in one_arg:
-        one_arg[op](code[self.p + 1])
-      elif op == Op.ENDPROG:
-        break
-      elif op == Op.INDEX:
-        p = self.p
-        self.index(code[p + 1],code[p + 2], code[p + 3], code[p + 4])
-      elif op == Op.PROCCALL:
-        p = self.p
-        self.proc_call(code[p + 1], code[p + 2])
-      elif op == Op.PROCEDURE:
-        p = self.p
-        self.procedure(code[p + 1], code[p + 2])
-      elif op == Op.PROGRAM:
-        p = self.p
-        self.program(code[p + 1], code[p + 2])
-      elif op == Op.VARIABLE:
-        p = self.p
-        self.variable(code[p + 1], code[p + 2])
-      elif op == Op.VARPARAM:
-        p = self.p
-        self.var_param(code[p + 1], code[p + 2])
-      else:
-        self.error('Unexpected opcode %d' % op)
-*/

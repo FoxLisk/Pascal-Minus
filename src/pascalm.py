@@ -12,7 +12,7 @@ def write(codes, filename):
     f.write(str(c) + " ")
   f.close()
 
-def compile_pascal(source, dest, is_debug, is_interpret = False, out_stream = sys.stdout, output_tokens = False, output_bytecodes = False):
+def compile_pascal(source, dest, is_debug = False, is_interpret = False, out_stream = sys.stdout, output_tokens = False, output_bytecodes = False):
   '''
   DID YOU KNOW that compile() is a built in function?
   '''
