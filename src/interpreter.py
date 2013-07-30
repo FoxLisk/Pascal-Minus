@@ -279,24 +279,35 @@ class Interpreter:
     self.unary_op(lambda x: -x)
 
   def interpret(self):
-    map = {
-        Op.ADD: self.add,
-        Op.AND: self.log_and,
-        Op.DIVIDE: self.divide,
-        Op.EQUAL: self.eq,
-        Op.GREATER: self.gt,
-        Op.LESS: self.lt,
-        Op.MINUS: self.minus,
-        Op.MODULO: self.mod,
-        Op.NOT: self.log_not,
-        Op.NOTEQUAL: self.ne,
-        Op.NOTGREATER: self.lte,
-        Op.NOTLESS: self.gte,
-        Op.OR: self.log_or,
-        Op.SUBTRACT: self.subtract,
-        Op.READ: self.read,
-        Op.WRITE: self.write
-      }
+    no_arg = {
+      Op.ADD: self.add,
+      Op.AND: self.log_and,
+      Op.DIVIDE: self.divide,
+      Op.EQUAL: self.eq,
+      Op.GREATER: self.gt,
+      Op.LESS: self.lt,
+      Op.MINUS: self.minus,
+      Op.MODULO: self.mod,
+      Op.NOT: self.log_not,
+      Op.NOTEQUAL: self.ne,
+      Op.NOTGREATER: self.lte,
+      Op.NOTLESS: self.gte,
+      Op.OR: self.log_or,
+      Op.SUBTRACT: self.subtract,
+      Op.READ: self.read,
+      Op.WRITE: self.write
+    }
+
+    one_arg = {
+      Op.ASSIGN: self.assign,
+      Op.CONSTANT: self.constant,
+      Op.DO: self.do,
+      Op.ENDPROC: self.end_proc,
+      Op.FIELD: self.field,
+      Op.GOTO: self.goto,
+      Op.LOCALVAR: self.local_var,
+      Op.VALUE: self.value
+    }
 
     while True:
       op = self.store[self.p]
@@ -315,27 +326,15 @@ class Interpreter:
           stack[disp_ptr] = '*%d*' % stack[disp_ptr]
         #debug('STACK: ' + str(stack))
         '''
-      if op == Op.ASSIGN:
-        self.assign(self.store[self.p + 1])
-      elif op == Op.CONSTANT:
-        self.constant(self.store[self.p + 1])
-      elif op == Op.DO:
-        self.do(self.store[self.p + 1])
-      elif op == Op.ENDPROC:
-        self.end_proc(self.p + 1)
+      if op in no_arg:
+        no_arg[op]()
+      elif op in one_arg:
+        one_arg[op](self.store[self.p + 1])
       elif op == Op.ENDPROG:
         break
-      elif op == Op.FIELD:
-        self.field(self.store[self.p + 1])
-      elif op == Op.GOTO:
-        self.goto(self.store[self.p + 1])
       elif op == Op.INDEX:
         p = self.p
         self.index(self.store[p + 1],self.store[p + 2], self.store[p + 3], self.store[p + 4])
-      elif op == Op.LOCALVAR:
-        self.local_var(self.store[self.p + 1])
-      elif op == Op.MINUS:
-        self.minus()
       elif op == Op.PROCCALL:
         p = self.p
         self.proc_call(self.store[p + 1], self.store[p + 2])
@@ -345,16 +344,12 @@ class Interpreter:
       elif op == Op.PROGRAM:
         p = self.p
         self.program(self.store[p + 1], self.store[p + 2])
-      elif op == Op.VALUE:
-        self.value(self.store[self.p + 1])
       elif op == Op.VARIABLE:
         p = self.p
         self.variable(self.store[p + 1], self.store[p + 2])
       elif op == Op.VARPARAM:
         p = self.p
         self.var_param(self.store[p + 1], self.store[p + 2])
-      elif op in map:
-        map[op]()
       else:
         self.error('Unexpected opcode %d' % op)
 
