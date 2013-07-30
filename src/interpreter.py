@@ -12,13 +12,13 @@ class Interpreter:
       self.store = get_code(filename)
     else:
       self.store = copy(code)
-    debug('loaded %d words of program code' % len(self.store))
+    #debug('loaded %d words of program code' % len(self.store))
     self.code_length = len(self.store)
     self.p = 0
     self.b = self.code_length
     self.s = self.code_length + 3
     self.out = out
-    debug('setup done: b: %d s %d' % (self.b, self.s))
+    #debug('setup done: b: %d s %d' % (self.b, self.s))
 
   def error(self, msg):
     print 'FATAL ERROR: STACK'
@@ -31,11 +31,13 @@ class Interpreter:
     resizing & mis-addressing for you
     '''
     diff = loc - len(self.store) + 1 #0-based indexing
-    while diff > 0:
-      self.store.append(-99999)
-      diff -= 1
-    if loc < self.code_length:
-      self.error('Trying to overwrite program instructions')
+    if diff > 0:
+      self.store.extend([-99999] * diff)
+
+    #This check should really be left in for safety but assuming the interpreter is bug-free (hah hah hah)
+    #it's actually safe to leave it out
+    #if loc < self.code_length:
+      #self.error('Trying to overwrite program instructions')
     #print 'setting store[%d] to %d' % (loc, val)
     self.store[loc] = val
 
@@ -45,7 +47,7 @@ class Interpreter:
     while level > 0: #move through the static links as many levels as necessary to find the variable in the correct stack frame
       x = self.store[x]
       level -= 1
-    debug('storing var location of %d at top of stack %d' % (x + displ, self.s))
+    #debug('storing var location of %d at top of stack %d' % (x + displ, self.s))
     self.set_store(self.s, x + displ) #set the top of the stack to the address of the sought variable
     self.p += 3 #move program three blocks forward (variable instruction is VARIABLE, LEVEL, DISPL)
 
@@ -56,7 +58,7 @@ class Interpreter:
       x = self.store[x]
       level -= 1
     var_loc = self.store[x + displ] #we need to grab the location of the variable that was passed in as a parameter
-    debug('found var param at %d' % var_loc)
+    #debug('found var param at %d' % var_loc)
     self.set_store(self.s, var_loc)
     self.p += 3 #move program three blocks forward (variable instruction is VARIABLE, LEVEL, DISPL)
 
@@ -64,7 +66,7 @@ class Interpreter:
     #we'll have something like ARRAY_VAR_ADDR, INDEX meaning to take the INDEXth element from the array pointed to by ARRAY_VAR_ADDR
     #length is the length of an element of the array, not the length of the array
     #so we want the top of the stack to be the ADDRESS of the 5th element of array_var_value
-    debug('length(lower: %d, upper: %d, length: %d)' % (lower, upper, length))
+    #debug('length(lower: %d, upper: %d, length: %d)' % (lower, upper, length))
     i = self.store[self.s] #this is the index to dereference
     if i < lower or i > upper:
       self.error('Trying to dereference past the bounds of an array on line %d' % line_no)
@@ -91,7 +93,7 @@ class Interpreter:
     i = self.store[self.s] #the value in store[s] is the address of the variable we want so i is now the location of the variable
     #not moving s because we just want to pop the address of the variable off and replace it with the value
     while length > 0: #so for each element in the var (possibly only the one) 
-      debug('value: setting %d to %d' % (self.s, self.store[i]))
+      #debug('value: setting %d to %d' % (self.s, self.store[i]))
       self.set_store(self.s, self.store[i]) #we copy the value at i into the store
       self.s += 1
       i += 1 #and move the pointer from the source var forward
@@ -117,15 +119,15 @@ class Interpreter:
       val_addr += 1
       length -= 1
     log += 'to ' + str(tmp)
-    debug(log)
+    #debug(log)
     self.p += 2
 
   def goto(self, displ):
     self.p += displ
 
   def do(self, displ):
-    debug('displ: %d' % displ)
-    debug('Value at top of stack: %d' % self.store[self.s])
+    #debug('displ: %d' % displ)
+    #debug('Value at top of stack: %d' % self.store[self.s])
     if self.store[self.s] == 1: #store[s] is the result of whatever expression we're evaluating
       self.p += 2 #move past the DO, DISPL instruction into the loop body
     else:
@@ -153,7 +155,7 @@ class Interpreter:
     self.set_store(self.s, static_link)
     self.set_store(self.s + 1, self.b) #store the current base address as the new dynamic link
     self.set_store(self.s + 2, self.p + 3) #current program instruction + 3 as new return address (3 because the proc call instr, level, displ and its the one AFTER those.)
-    debug(log)
+    #debug(log)
     self.b = self.s
     self.s = self.b + 2
     self.p += displ
@@ -180,7 +182,7 @@ class Interpreter:
     log = 'program var length = %d s before = %d ' % (var_length, self.s)
     self.s += var_length - 1 #functions that need to a free stack space will push it forward themselves, so we can actually just move it forward to point at the last variable
     log += 's after = %d' % self.s
-    debug(log)
+    #debug(log)
     self.p += displ
 
   def write(self):
@@ -201,11 +203,12 @@ class Interpreter:
   #######
 
   def binary_op(self, operation):
+    #TODO very slow
     self.s -= 1
     x = self.store[self.s]
     y = self.store[self.s + 1]
     self.set_store(self.s, operation(x, y))
-    debug('storing %d at top of stack' % operation(x, y))
+    #debug('storing %d at top of stack' % operation(x, y))
     self.p += 1
 
   def add(self):
@@ -266,16 +269,18 @@ class Interpreter:
       except ValueError:
         op = bytecodes[self.store[self.p]]
       try:
-        debug('-- %s' % reverse_bytecodes[op])
+        #debug('-- %s' % reverse_bytecodes[op])
+        pass
       except KeyError:
-        debug('handling %s' % op)
+        #debug('handling %s' % op)
+        pass
 
       if debug_mode:
         stack = copy(self.store[self.code_length:])
         disp_ptr = self.s - self.code_length
         if 0 <= disp_ptr < len(stack):
           stack[disp_ptr] = '*%d*' % stack[disp_ptr]
-        debug('STACK: ' + str(stack))
+        #debug('STACK: ' + str(stack))
       if op == Op.ADD:
         self.add()
       elif op == Op.AND:
