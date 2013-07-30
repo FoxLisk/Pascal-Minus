@@ -262,11 +262,11 @@ void localvar(int displ) {
 }
 
 void value(int length) {
-  int i = stack[s];
+  int var_addr = stack[s];
   while (length > 0) {
-    stack[s] = stack[i];
+    stack[s] = stack[var_addr];
     s++;
-    i++;
+    var_addr++;
     length--;
   }
   s--;
@@ -315,7 +315,7 @@ void variable(int level, int displ) {
   s++;
   int x = b;
   while (level > 0) {
-    x = stack[s];
+    x = stack[x];
     level--;
   }
   stack[s] = x + displ;
@@ -387,11 +387,6 @@ bool interpret(char* const file_name, bool debug) {
     int op = program.opcodes[p];
 #ifdef DEBUG
     printf("Handling %s [%d]\n", names[op], op);
-    printf("Stack before: ");
-    for (int i = 0; i <= s; i++) {
-      printf("%d ", stack[i]);
-    }
-    printf("\n");
 #endif
     switch(op) {
       case OP_ADD:
@@ -471,7 +466,7 @@ bool interpret(char* const file_name, bool debug) {
         localvar(program.opcodes[p+1]);
         break;
       case OP_VALUE:
-        assign(program.opcodes[p+1]);
+        value(program.opcodes[p+1]);
         break;
       //end one-arg opts
       case OP_INDEX:
@@ -496,6 +491,13 @@ bool interpret(char* const file_name, bool debug) {
         running = false;
         break;
     }
+#ifdef DEBUG
+    printf("Stack after: ");
+    for (int i = 0; i <= s; i++) {
+      printf("%d ", stack[i]);
+    }
+    printf("\n");
+#endif
   }
   return true;
 }

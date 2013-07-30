@@ -102,12 +102,12 @@ class Interpreter:
     self.p += 2
 
   def value(self, length):
-    i = self.store[self.s] #the value in store[s] is the address of the variable we want so i is now the location of the variable
+    var_addr = self.store[self.s] #the value in store[s] is the address of the variable we want so i is now the location of the variable
     #not moving s because we just want to pop the address of the variable off and replace it with the value
     while length > 0: #so for each element in the var (possibly only the one) 
-      self.set_store(self.s, self.store[i]) #we copy the value at i into the store
+      self.set_store(self.s, self.store[var_addr]) #we copy the value at i into the store
       self.s += 1
-      i += 1 #and move the pointer from the source var forward
+      var_addr += 1 #and move the pointer from the source var forward
       length -= 1
     self.s -= 1 #in the loop we moved one word past the end of the actual value
     self.p += 2
