@@ -808,7 +808,11 @@ class Parser:
         type = self.variable_access(factor_name)
         #variable_access is used in both assignment and expressions, so if we're
         #getting the value of a variable here factor has to emit the value part
-        self.emit_code(Op.VALUE, type.length())
+        l = type.length()
+        if l == 1:
+          self.emit_code(Op.SHORTVALUE)
+        else:
+          self.emit_code(Op.VALUE, l)
         return type
       else:
         error("Cannot find constant or variable named %s" % factor_name, self.line_no)

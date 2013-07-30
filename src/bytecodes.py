@@ -27,6 +27,7 @@ class Op:
   PROGRAM = 25
   SUBTRACT = 26
   VALUE = 27
+  SHORTVALUE = 35
   VARIABLE = 28
   VARPARAM = 29
   READ = 30
@@ -68,7 +69,8 @@ reverse_bytecodes = {
   31: 'WRITE',
   32: 'DEFADDR',
   33: 'DEFARG',
-  34: 'LOCALVAR'
+  34: 'LOCALVAR',
+  35: 'SHORTVALUE'
 }
 
 bytecodes = {y:x for x, y in reverse_bytecodes.items()}
@@ -102,6 +104,7 @@ code_lengths = {
   Op.PROCCALL: 3,
   Op.PROCEDURE: 3,
   Op.PROGRAM: 3,
+  Op.SHORTVALUE: 1,
   Op.SUBTRACT: 1,
   Op.VALUE: 2,
   Op.VARIABLE: 3,

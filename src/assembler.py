@@ -24,6 +24,7 @@ skip_codes = {
   Op.NOTGREATER,
   Op.NOTLESS,
   Op.OR,
+  Op.SHORTVALUE,
   Op.SUBTRACT,
   Op.VALUE,
   Op.VARIABLE,

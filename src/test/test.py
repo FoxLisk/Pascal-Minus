@@ -35,6 +35,7 @@ test_cases = [
 errors = []
 
 for fn, expected in test_cases:
+  '''
   compile_pascal('cases/%s.pm' % fn, 'dest', False, True, stream)
   if stream.val() != expected:
     errors.append("Test case %s failed: Expected `%s`, found `%s`" % (fn, expected, stream.val()))
@@ -45,7 +46,6 @@ for fn, expected in test_cases:
       errors.append("Test case %s failed: Expected `%s`, found `%s`" % (fn, expected, stream.val()))
   except Exception as e:
     errors.append('Caught exception in test case %s:\n  %s' % (fn, e.message))
-    '''
   stream.reset()
 
 if len(errors) > 0:

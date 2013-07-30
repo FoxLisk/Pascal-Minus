@@ -1,6 +1,7 @@
 from copy import copy
 from administration_functions import get_code, debug, set_debug, debug_mode
 from bytecodes import Op, reverse_bytecodes, bytecodes
+from collections import defaultdict
 import sys
 
 
@@ -12,13 +13,11 @@ class Interpreter:
       self.store = get_code(filename)
     else:
       self.store = copy(code)
-    #debug('loaded %d words of program code' % len(self.store))
     self.code_length = len(self.store)
     self.p = 0
     self.b = self.code_length
     self.s = self.code_length + 3
     self.out = out
-    #debug('setup done: b: %d s %d' % (self.b, self.s))
 
   def error(self, msg):
     print 'FATAL ERROR: STACK'
@@ -100,13 +99,18 @@ class Interpreter:
     i = self.store[self.s] #the value in store[s] is the address of the variable we want so i is now the location of the variable
     #not moving s because we just want to pop the address of the variable off and replace it with the value
     while length > 0: #so for each element in the var (possibly only the one) 
-      #debug('value: setting %d to %d' % (self.s, self.store[i]))
       self.set_store(self.s, self.store[i]) #we copy the value at i into the store
       self.s += 1
       i += 1 #and move the pointer from the source var forward
       length -= 1
     self.s -= 1 #in the loop we moved one word past the end of the actual value
     self.p += 2
+
+  def short_value(self):
+    i = self.store[self.s] #the value in store[s] is the address of the variable we want so i is now the location of the variable
+    #not moving s because we just want to pop the address of the variable off and replace it with the value
+    self.set_store(self.s, self.store[i]) #we copy the value at i into the store
+    self.p += 1
 
   def assign(self, length):
     #TODO this is probably broken
@@ -133,8 +137,6 @@ class Interpreter:
     self.p += displ
 
   def do(self, displ):
-    #debug('displ: %d' % displ)
-    #debug('Value at top of stack: %d' % self.store[self.s])
     if self.store[self.s] == 1: #store[s] is the result of whatever expression we're evaluating
       self.p += 2 #move past the DO, DISPL instruction into the loop body
     else:
@@ -288,11 +290,13 @@ class Interpreter:
       Op.LESS: self.lt,
       Op.MINUS: self.minus,
       Op.MODULO: self.mod,
+      Op.MULTIPLY: self.multiply,
       Op.NOT: self.log_not,
       Op.NOTEQUAL: self.ne,
       Op.NOTGREATER: self.lte,
       Op.NOTLESS: self.gte,
       Op.OR: self.log_or,
+      Op.SHORTVALUE: self.short_value,
       Op.SUBTRACT: self.subtract,
       Op.READ: self.read,
       Op.WRITE: self.write
@@ -317,16 +321,14 @@ class Interpreter:
         debug('-- %s' % reverse_bytecodes[op])
       except KeyError:
         debug('handling %s' % op)
-        '''
 
-      '''
       if debug_mode:
         stack = copy(store[self.code_length:])
         disp_ptr = self.s - self.code_length
         if 0 <= disp_ptr < len(stack):
           stack[disp_ptr] = '*%d*' % stack[disp_ptr]
-        #debug('STACK: ' + str(stack))
-        '''
+        debug('STACK: ' + str(stack))
+      '''
       if op in no_arg:
         no_arg[op]()
       elif op in one_arg:
