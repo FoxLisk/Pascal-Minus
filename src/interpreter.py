@@ -10,21 +10,20 @@ class Interpreter:
     if (filename is None) == (code is None):
       raise Exception("Must pass in a filename XOR a list of bytecodes")
     if filename is not None:
-      self.store = get_code(filename)
+      self.code = get_code(filename)
     else:
-      self.store = copy(code)
-    self.code_length = len(self.store)
+      self.code = copy(code)
     self.p = 0
-    self.b = self.code_length
-    self.s = self.code_length + 3
+    self.b = 0
+    self.s = 3
     self.out = out
+
     self.stack_size = stack_size
-    
-    self.store.extend([-99999] * stack_size)
+    self.store = [-99999] * stack_size
 
   def error(self, msg):
     print 'FATAL ERROR: STACK'
-    print self.store[self.code_length:]
+    print self.store
     raise Exception(msg)
 
   def set_store(self, loc, val):
@@ -316,9 +315,9 @@ class Interpreter:
       Op.VALUE: self.value
     }
 
-    store = self.store
+    code = self.code
     while True:
-      op = store[self.p]
+      op = code[self.p]
       '''
       try:
         debug('-- %s' % reverse_bytecodes[op])
@@ -326,7 +325,7 @@ class Interpreter:
         debug('handling %s' % op)
 
       if debug_mode:
-        stack = copy(store[self.code_length:])
+        stack = copy(code[self.code_length:])
         disp_ptr = self.s - self.code_length
         if 0 <= disp_ptr < len(stack):
           stack[disp_ptr] = '*%d*' % stack[disp_ptr]
@@ -335,27 +334,27 @@ class Interpreter:
       if op in no_arg:
         no_arg[op]()
       elif op in one_arg:
-        one_arg[op](store[self.p + 1])
+        one_arg[op](code[self.p + 1])
       elif op == Op.ENDPROG:
         break
       elif op == Op.INDEX:
         p = self.p
-        self.index(store[p + 1],store[p + 2], store[p + 3], store[p + 4])
+        self.index(code[p + 1],code[p + 2], code[p + 3], code[p + 4])
       elif op == Op.PROCCALL:
         p = self.p
-        self.proc_call(store[p + 1], store[p + 2])
+        self.proc_call(code[p + 1], code[p + 2])
       elif op == Op.PROCEDURE:
         p = self.p
-        self.procedure(store[p + 1], store[p + 2])
+        self.procedure(code[p + 1], code[p + 2])
       elif op == Op.PROGRAM:
         p = self.p
-        self.program(store[p + 1], store[p + 2])
+        self.program(code[p + 1], code[p + 2])
       elif op == Op.VARIABLE:
         p = self.p
-        self.variable(store[p + 1], store[p + 2])
+        self.variable(code[p + 1], code[p + 2])
       elif op == Op.VARPARAM:
         p = self.p
-        self.var_param(store[p + 1], store[p + 2])
+        self.var_param(code[p + 1], code[p + 2])
       else:
         self.error('Unexpected opcode %d' % op)
 
