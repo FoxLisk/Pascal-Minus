@@ -6,7 +6,7 @@ import sys
 
 
 class Interpreter:
-  def __init__(self, out, filename = None, code = None):
+  def __init__(self, out, filename = None, code = None, stack_size = 1000000):
     if (filename is None) == (code is None):
       raise Exception("Must pass in a filename XOR a list of bytecodes")
     if filename is not None:
@@ -18,6 +18,9 @@ class Interpreter:
     self.b = self.code_length
     self.s = self.code_length + 3
     self.out = out
+    self.stack_size = stack_size
+    
+    self.store.extend([-99999] * stack_size)
 
   def error(self, msg):
     print 'FATAL ERROR: STACK'
@@ -29,9 +32,13 @@ class Interpreter:
     use this to set values in the stack instead of doing it manually, it handles
     resizing & mis-addressing for you
     '''
+    '''
     diff = loc - len(self.store) + 1 #0-based indexing
     if diff > 0:
       self.store.extend([-99999] * diff)
+    '''
+    if loc > self.stack_size:
+      self.error('Out of stack space')
 
     #This check should really be left in for safety but assuming the interpreter is bug-free (hah hah hah)
     #it's actually safe to leave it out
