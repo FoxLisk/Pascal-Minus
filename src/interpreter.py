@@ -309,8 +309,9 @@ class Interpreter:
       Op.VALUE: self.value
     }
 
+    store = self.store
     while True:
-      op = self.store[self.p]
+      op = store[self.p]
       '''
       try:
         debug('-- %s' % reverse_bytecodes[op])
@@ -320,7 +321,7 @@ class Interpreter:
 
       '''
       if debug_mode:
-        stack = copy(self.store[self.code_length:])
+        stack = copy(store[self.code_length:])
         disp_ptr = self.s - self.code_length
         if 0 <= disp_ptr < len(stack):
           stack[disp_ptr] = '*%d*' % stack[disp_ptr]
@@ -329,27 +330,27 @@ class Interpreter:
       if op in no_arg:
         no_arg[op]()
       elif op in one_arg:
-        one_arg[op](self.store[self.p + 1])
+        one_arg[op](store[self.p + 1])
       elif op == Op.ENDPROG:
         break
       elif op == Op.INDEX:
         p = self.p
-        self.index(self.store[p + 1],self.store[p + 2], self.store[p + 3], self.store[p + 4])
+        self.index(store[p + 1],store[p + 2], store[p + 3], store[p + 4])
       elif op == Op.PROCCALL:
         p = self.p
-        self.proc_call(self.store[p + 1], self.store[p + 2])
+        self.proc_call(store[p + 1], store[p + 2])
       elif op == Op.PROCEDURE:
         p = self.p
-        self.procedure(self.store[p + 1], self.store[p + 2])
+        self.procedure(store[p + 1], store[p + 2])
       elif op == Op.PROGRAM:
         p = self.p
-        self.program(self.store[p + 1], self.store[p + 2])
+        self.program(store[p + 1], store[p + 2])
       elif op == Op.VARIABLE:
         p = self.p
-        self.variable(self.store[p + 1], self.store[p + 2])
+        self.variable(store[p + 1], store[p + 2])
       elif op == Op.VARPARAM:
         p = self.p
-        self.var_param(self.store[p + 1], self.store[p + 2])
+        self.var_param(store[p + 1], store[p + 2])
       else:
         self.error('Unexpected opcode %d' % op)
 
