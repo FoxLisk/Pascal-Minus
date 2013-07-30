@@ -222,7 +222,9 @@ class Interpreter:
     self.s -= 1
     self.set_store(self.s, self.store[self.s] + self.store[self.s + 1])
     self.p += 1
-    #self.binary_op(lambda x, y: x + y)
+
+  def divide(self):
+    self.binary_op(lambda x, y: x / y)
 
   def multiply(self):
     self.binary_op(lambda x, y: x * y)
@@ -277,14 +279,27 @@ class Interpreter:
     self.unary_op(lambda x: -x)
 
   def interpret(self):
+    map = {
+        Op.ADD: self.add,
+        Op.AND: self.log_and,
+        Op.DIVIDE: self.divide,
+        Op.EQUAL: self.eq,
+        Op.GREATER: self.gt,
+        Op.LESS: self.lt,
+        Op.MINUS: self.minus,
+        Op.MODULO: self.mod,
+        Op.NOT: self.log_not,
+        Op.NOTEQUAL: self.ne,
+        Op.NOTGREATER: self.lte,
+        Op.NOTLESS: self.gte,
+        Op.OR: self.log_or,
+        Op.SUBTRACT: self.subtract,
+        Op.READ: self.read,
+        Op.WRITE: self.write
+      }
+
     while True:
       op = self.store[self.p]
-      '''
-      try:
-        op = int(self.store[self.p])
-      except ValueError:
-        op = bytecodes[self.store[self.p]]
-        '''
       '''
       try:
         debug('-- %s' % reverse_bytecodes[op])
@@ -300,53 +315,27 @@ class Interpreter:
           stack[disp_ptr] = '*%d*' % stack[disp_ptr]
         #debug('STACK: ' + str(stack))
         '''
-      if op == Op.ADD:
-        self.add()
-      elif op == Op.AND:
-        self.log_and()
-      elif op == Op.ASSIGN:
+      if op == Op.ASSIGN:
         self.assign(self.store[self.p + 1])
       elif op == Op.CONSTANT:
         self.constant(self.store[self.p + 1])
-      elif op == Op.DIVIDE:
-        self.div()
       elif op == Op.DO:
         self.do(self.store[self.p + 1])
       elif op == Op.ENDPROC:
         self.end_proc(self.p + 1)
       elif op == Op.ENDPROG:
         break
-      elif op == Op.EQUAL:
-        self.eq()
       elif op == Op.FIELD:
         self.field(self.store[self.p + 1])
       elif op == Op.GOTO:
         self.goto(self.store[self.p + 1])
-      elif op == Op.GREATER:
-        self.gt()
       elif op == Op.INDEX:
         p = self.p
         self.index(self.store[p + 1],self.store[p + 2], self.store[p + 3], self.store[p + 4])
-      elif op == Op.LESS:
-        self.lt()
       elif op == Op.LOCALVAR:
         self.local_var(self.store[self.p + 1])
       elif op == Op.MINUS:
         self.minus()
-      elif op == Op.MODULO:
-        self.mod()
-      elif op == Op.MULTIPLY:
-        self.multiply()
-      elif op == Op.NOT:
-        self.log_not()
-      elif op == Op.NOTEQUAL:
-        self.ne()
-      elif op == Op.NOTGREATER:
-        self.lte()
-      elif op == Op.NOTLESS:
-        self.gte()
-      elif op == Op.OR:
-        self.log_or()
       elif op == Op.PROCCALL:
         p = self.p
         self.proc_call(self.store[p + 1], self.store[p + 2])
@@ -356,8 +345,6 @@ class Interpreter:
       elif op == Op.PROGRAM:
         p = self.p
         self.program(self.store[p + 1], self.store[p + 2])
-      elif op == Op.SUBTRACT:
-        self.subtract()
       elif op == Op.VALUE:
         self.value(self.store[self.p + 1])
       elif op == Op.VARIABLE:
@@ -366,10 +353,8 @@ class Interpreter:
       elif op == Op.VARPARAM:
         p = self.p
         self.var_param(self.store[p + 1], self.store[p + 2])
-      elif op == Op.READ:
-        self.read()
-      elif op == Op.WRITE:
-        self.write()
+      elif op in map:
+        map[op]()
       else:
         self.error('Unexpected opcode %d' % op)
 
