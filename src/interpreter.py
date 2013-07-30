@@ -121,16 +121,12 @@ class Interpreter:
     val_addr = self.s - length + 1
     var_addr = self.store[self.s - length]
     tmp = var_addr
-    log = 'Assigning '
     self.s -= length + 1
     while length > 0: #so for each element in the var (possibly only the one) 
-      log += str(self.store[val_addr]) + ' '
       self.set_store(var_addr, self.store[val_addr])
       var_addr += 1
       val_addr += 1
       length -= 1
-    log += 'to ' + str(tmp)
-    #debug(log)
     self.p += 2
 
   def goto(self, displ):
