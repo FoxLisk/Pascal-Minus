@@ -285,19 +285,21 @@ class Interpreter:
       except ValueError:
         op = bytecodes[self.store[self.p]]
         '''
+      '''
       try:
-        #debug('-- %s' % reverse_bytecodes[op])
-        pass
+        debug('-- %s' % reverse_bytecodes[op])
       except KeyError:
-        #debug('handling %s' % op)
-        pass
+        debug('handling %s' % op)
+        '''
 
+      '''
       if debug_mode:
         stack = copy(self.store[self.code_length:])
         disp_ptr = self.s - self.code_length
         if 0 <= disp_ptr < len(stack):
           stack[disp_ptr] = '*%d*' % stack[disp_ptr]
         #debug('STACK: ' + str(stack))
+        '''
       if op == Op.ADD:
         self.add()
       elif op == Op.AND:
