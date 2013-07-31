@@ -222,12 +222,13 @@ class Scope:
     return str(self.scope)
 
 class Parser:
-  def __init__(self, symbol_list, labeler = None, is_import = False):
+  def __init__(self, symbol_list, labeler = None, is_import = False, lib = ['.']):
     if labeler is None:
       self.labeler = Labeler()
     else:
       self.labeler = labeler
 
+    self.lib = lib
     self.is_import = is_import
     self.symbols = self._next_symbol(symbol_list)
     self.scope = Scope.default_scope()
@@ -330,7 +331,14 @@ class Parser:
     while self.check('.'):
       self.expect('.')
       imported.append(self.name())
-    tokens = Scanner(os.path.join(*imported) + ".pm").scan()
+    tokens = None
+    for loc in self.lib:
+      path = os.path.join(loc, *imported) + '.pm'
+      if os.path.isfile(path):
+        tokens = Scanner(path).scan()
+        break
+    if tokens is None:
+      error('Unable to find `%s` in any libraries (checked %s)' % ('.'.join(imported), ':'.join(self.lib)))
     parser = Parser(tokens, self.labeler, True)
     code = parser.parse()
     other_scope = parser.scope

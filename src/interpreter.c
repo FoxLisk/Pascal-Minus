@@ -487,6 +487,13 @@ bool interpret(char* const file_name, bool debug) {
       case OP_ENDPROG:
         running = false;
         break;
+      default:
+        running = false;
+        char errmsg[20]; 
+        sprintf(errmsg, "Unknown opcode %d", op);
+        error(errmsg);
+        break;
+
     }
 
     if (debug) {

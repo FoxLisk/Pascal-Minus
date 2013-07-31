@@ -1,5 +1,6 @@
 from pascalm import compile_pascal
 import subprocess
+import traceback
 
 class CheatingStream:
   def __init__(self):
@@ -30,7 +31,8 @@ test_cases = [
   ('proc', 'A'),
   ('proc_vars', 'A'),
   ('nested_proc', 'A'),
-  ('recursion', 'ABCDEFGHIJK')
+  ('recursion', 'ABCDEFGHIJK'),
+  ('bitwise', '2\n1\n7\n4\n')
 ]
 
 subprocess.call(['gcc', '../interpreter.c', '-std=c99', '-Wall', '-pedantic', '-o', 'pascalvm'])
@@ -45,15 +47,15 @@ for fn, expected in test_cases:
     errors.append("Test case %s failed: Expected `%s`, found `%s`" % (fn, expected, stream.val()))
     '''
   try: 
-    compile_pascal('cases/%s.pm' % fn, 'dest', is_interpret = True, out_stream = stream)
+    compile_pascal('cases/%s.pm' % fn, 'dest', is_interpret = True, out_stream = stream, lib = ['..'])
     if stream.val() != expected:
       errors.append("Test case %s failed: Expected `%s`, found `%s`" % (fn, expected, stream.val()))
 
     output = subprocess.check_output(['./pascalvm', 'dest']);
     if output != expected:
       c_errors.append("Test case %s failed: Expected `%s`, found `%s`" % (fn, expected, output))
-  except Exception as e:
-    errors.append('Caught exception in test case %s:\n  %s' % (fn, e.message))
+  except:
+    errors.append('Caught exception in test case %s:\n  %s' % (fn, traceback.format_exc()))
   stream.reset()
 
 if len(errors) > 0:
