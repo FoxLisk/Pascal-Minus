@@ -65,6 +65,6 @@ Other than this, which execution model I was unable to make very clear in the co
 Want to work on a compiler?
 ---------------------------
 
-Send me a pull request! Lots of stuff needs work. I will endeavour to keep the neighbouring todo.pm up to date. If you want to add a feature, pick one off the list and send it in.
+Send me a pull request! Lots of stuff needs work. I will endeavour to keep the neighbouring todo.md up to date. If you want to add a feature, pick one off the list and send it in.
 
 Before you do, though, make sure all the tests run, and add some of your own for whatever it is you're implementing. Simply run python test.py in the /src/test directory. If it is silent, you're good to go (after you add your own, of course).
