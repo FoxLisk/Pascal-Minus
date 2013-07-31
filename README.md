@@ -4,7 +4,6 @@ Pascal-Minus
 This is an implementation of the Pascal- language as specified in Per Brinch Hansen's [On Pascal Compilers](http://www.amazon.com/Brinch-Hansen-Pascal-Compilers/dp/0130830984/ref=sr_1_4?ie=UTF8&qid=1375247876&sr=8-4&keywords=pascal+compilers). It is, in fact, already a slight extension of this work.
 
 Usage
-
 -----
 
 The compiler is the file `pascalm.py`. To compile is simple:
