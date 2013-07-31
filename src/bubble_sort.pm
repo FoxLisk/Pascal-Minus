@@ -1,3 +1,5 @@
+import lib.writeint;
+
 program bubblesort;
 const MAX = 500;
 type List = array [1..MAX] of Integer;
@@ -10024,5 +10026,13 @@ begin
             end;
           i := i + 1
         end;
+    end;
+
+  i := 1;
+  while i < MAX do
+    begin
+      WriteInt(x[i]);
+      Write(10); {\n}
+      i := i + 1;
     end;
 end.
