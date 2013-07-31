@@ -230,7 +230,6 @@ class Parser:
     self.is_import = is_import
     self.symbols = self._next_symbol(symbol_list)
     self.scope = Scope.default_scope()
-    print self.scope
     self.block_level = 0
     self.bytecodes = []
     self.current_symbol = None
@@ -578,7 +577,6 @@ class Parser:
     if len(params) != len(proc.params):
       error('`%s` takes %d parameters; %d given' % (proc_name, len(proc.params), len(params)), self.line_no)
     for i in range(len(params)):
-      print params[i], proc.params[i].type
       if params[i] != proc.params[i].type: 
         error('Parameter %d passed to `%s` is of type `%s`; expecting `%s`' % (i + 1, proc_name, params[i], proc.params[i].type), self.line_no)
     if proc.name == 'Write':
