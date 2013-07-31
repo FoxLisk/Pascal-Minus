@@ -600,7 +600,7 @@ class Parser:
       if not first:
         self.expect(',')
       if param.is_var_param:
-        if not check('name'):
+        if not self.check('name'):
           error('Var params must be passed a variable', self.line_no)
         var_name = self.name()
         var = self.variable_access(var_name)
