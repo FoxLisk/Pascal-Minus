@@ -34,9 +34,8 @@ def compile_pascal(source, dest, is_debug = False, is_interpret = False, out_str
   assembler = Assembler(bytecodes)
   assembled = assembler.assemble()
   if is_debug:
-    write(prettify(assembled), dest)
-  else:
-    write(assembled, dest)
+    write(prettify(assembled), dest + '_debug')
+  write(assembled, dest)
   debug('assembly complete.' )
   if is_interpret:
     interp = Interpreter(out_stream, code = assembled)

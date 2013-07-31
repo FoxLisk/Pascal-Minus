@@ -43,7 +43,8 @@ class Scanner:
     self.chars = chars()
    
   def emit(self, *vals):
-    map(lambda v: self.tokens.append(v), vals)
+    self.tokens.extend(vals)
+    #map(lambda v: self.tokens.append(v), vals)
 
   def begin_line(self, new_line_no):
     self.line_no = new_line_no
