@@ -17,7 +17,7 @@ You can then run the code with
 
     python interpreter.py my_input_file.pmc
 
-This is the simplest way to do things. The python implementation of the interpreter is very slow, so if you want to see greater performance you'll need to compile the C implementation. The compilations is simple:
+This is the simplest way to do things. The python implementation of the interpreter is very slow, so if you want to see greater performance you'll need to compile the C implementation. The compilation is simple:
 
     gcc -std=C99 interpreter.c -o pascalvm
 
@@ -30,7 +30,6 @@ but executes tremendously faster - from some limited profiling of a bubble sort,
 I have not made any attempt to compile the C interpreter in any system other than gcc on OS X.
 
 Fancy Usage
-
 -----------
 
 All of these (the compiler and both interpreters) accept `-d` or `--debug` as a parameter. This provides a lot of extra debug information in various ways. The two interpreters provide runtime debug information to a dramatic extreme, but not the same information. The compiler provides some extra information it thinks is interesting at compile time, and also outputs the bytecode in a human-readable format to input_file.pmc_debug. This is useful if you're not sure the code is being emitted correctly.
@@ -45,7 +44,6 @@ The compiler takes some additional options:
 In testing new additions I find generally `python pascalm.py source -d -i` to be the fastest way to get feedback.
 
 Compiler Internals
-
 ------------------
 
 This is what would be called perhaps a 3-pass compiler.
@@ -66,7 +64,8 @@ Perhaps the most difficult part of the interpreter to understand is the handling
 Other than this, which execution model I was unable to make very clear in the code itself, the stack behaviour is very straightforward.
 
 Want to work on a compiler?
-
 ---------------------------
 
 Send me a pull request! Lots of stuff needs work. I will endeavour to keep the neighbouring todo.pm up to date. If you want to add a feature, pick one off the list and send it in.
+
+Before you do, though, make sure all the tests run, and add some of your own for whatever it is you're implementing. Simply run python test.py in the /src/test directory. If it is silent, you're good to go (after you add your own, of course).
