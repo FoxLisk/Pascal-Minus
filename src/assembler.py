@@ -31,6 +31,10 @@ skip_codes = {
   Op.VARPARAM,
   Op.READ,
   Op.WRITE,
+  Op.BITAND,
+  Op.BITOR,
+  Op.BITLSHIFT,
+  Op.BITRSHIFT
 }
 
 class Assembler:

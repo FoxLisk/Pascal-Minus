@@ -266,6 +266,18 @@ class Interpreter:
   def ne(self):
     self.binary_op(lambda x, y: 1 if x != y else 0)
 
+  def bitwise_and(self):
+    self.binary_op(lambda x, y: x & y)
+
+  def bitwise_or(self):
+    self.binary_op(lambda x, y: x | y)
+
+  def bitwise_lshift(self):
+    self.binary_op(lambda x, y: x << y)
+
+  def bitwise_rshift(self):
+    self.binary_op(lambda x, y: x >> y)
+
   ######
   # UNARY OPERATIONS
   ######
@@ -300,7 +312,11 @@ class Interpreter:
       Op.SHORTVALUE: self.short_value,
       Op.SUBTRACT: self.subtract,
       Op.READ: self.read,
-      Op.WRITE: self.write
+      Op.WRITE: self.write,
+      Op.BITAND: self.bitwise_and,
+      Op.BITOR: self.bitwise_or,
+      Op.BITLSHIFT: self.bitwise_lshift,
+      Op.BITRSHIFT: self.bitwise_rshift
     }
 
     one_arg = {
