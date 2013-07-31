@@ -11,7 +11,7 @@ _firsts = {
   'Factor': ["numeral", "name", "(", "not"],
   'Term': ["numeral", "name", "(", "not"],
   'AddingOperator': ["+", "-", "or"],
-  'MultiplyingOperator': ["*", "div", "mod", "and"],
+  'MultiplyingOperator': ["*", "div", "mod", "and", "|", "&", "<<", ">>"],
   'SignOperator': ["+", "-"],
   'SimpleExpression': ["+", "-", "numeral", "name", "(", "not"],
   'RelationalOperator': ["<", "=", ">", "<=", "<>", ">="],

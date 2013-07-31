@@ -13,7 +13,7 @@ class WordType:
 
 class Scanner:
   ETX = -1
-  invisible = Set([chr(x) for x in range(0, 40) if chr(x) not in ' \n'])
+  invisible = Set([chr(x) for x in range(0, 32) if chr(x) not in ' \n'])
   letters = list('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_')
   separators = [' ', '\n', '{']
   standard_names = ['Integer', 'Boolean', 'False', 'True', 'Read', 'Write']
@@ -158,6 +158,9 @@ class Scanner:
     elif self.ch == '>':
       self.emit(symbols['<>'])
       self.next_char()
+    elif self.ch == '<':
+      self.emit(symbols['<<'])
+      self.next_char()
     else:
       self.emit(symbols['<'])
 
@@ -166,6 +169,9 @@ class Scanner:
     self.next_char()
     if self.ch == '=':
       self.emit(symbols['>='])
+      self.next_char()
+    elif self.ch == '>':
+      self.emit(symbols['>>'])
       self.next_char()
     else:
       self.emit(symbols['>'])

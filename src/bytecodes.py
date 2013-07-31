@@ -13,7 +13,6 @@ class Op:
   GREATER = 12
   INDEX = 13
   LESS = 14
-  LOCALVAR = 34
   MINUS = 15
   MODULO = 16
   MULTIPLY = 17
@@ -27,13 +26,19 @@ class Op:
   PROGRAM = 25
   SUBTRACT = 26
   VALUE = 27
-  SHORTVALUE = 35
   VARIABLE = 28
   VARPARAM = 29
   READ = 30
   WRITE = 31
   DEFADDR = 32
   DEFARG = 33
+  LOCALVAR = 34
+  SHORTVALUE = 35
+  BITAND = 36
+  BITOR = 37
+  BITLSHIFT = 38
+  BITRSHIFT = 39
+
 
 reverse_bytecodes = {
   1: 'ADD',
@@ -70,7 +75,11 @@ reverse_bytecodes = {
   32: 'DEFADDR',
   33: 'DEFARG',
   34: 'LOCALVAR',
-  35: 'SHORTVALUE'
+  35: 'SHORTVALUE',
+  36: 'BITAND',
+  37: 'BITOR',
+  38: 'BITLSHIFT',
+  39: 'BITRSHIFT'
 }
 
 bytecodes = {y:x for x, y in reverse_bytecodes.items()}
@@ -111,5 +120,10 @@ code_lengths = {
   Op.VARPARAM: 3,
   Op.READ: 1,
   Op.WRITE: 1,
-  Op.LOCALVAR: 2 #op displ
+  Op.LOCALVAR: 2, #op displ
+  Op.BITAND: 1,
+  Op.BITOR: 1,
+  Op.BITLSHIFT: 1,
+  Op.BITRSHIFT: 1,
+
 }

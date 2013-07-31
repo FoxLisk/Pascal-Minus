@@ -33,7 +33,7 @@ SimpleExpression = [SignOperator] Term {AddingOperator Term}
 SignOperator = "+" | "-"
 AddingOperator = "+" | "-" | "or"
 Term = Factor {MultiplyingOperator Factor}
-MultiplyingOperator: "*" | "div" | "mod" | "and"
+MultiplyingOperator: "*" | "div" | "mod" | "and" | "|" | "&" | "<<" | ">>"
 Factor = Constant | VariableAccess | "(" Expression ")" | "not" Factor
 VariableAccess = VariableName {Selector}
 Selector = IndexedSelector | FieldSelector

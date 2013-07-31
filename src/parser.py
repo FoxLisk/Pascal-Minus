@@ -836,10 +836,18 @@ class Parser:
           self.emit_code(Op.DIVIDE)
         elif op == 'mod':
           self.emit_code(Op.MODULO)
+        elif op == '&':
+          self.emit_code(Op.BITAND)
+        elif op == '|':
+          self.emit_code(Op.BITOR)
+        elif op == '<<':
+          self.emit_code(Op.BITLSHIFT)
+        elif op == '>>':
+          self.emit_code(Op.BITRSHIFT)
     return type
 
   def multiplying_operator(self):
-    if any(map(self.check, ['*', 'div', 'mod', 'and'])):
+    if any(map(self.check, ['*', 'div', 'mod', 'and', '|', '&', '<<', '>>'])):
       self.next_symbol()
     else:
       error('expected multiplying operator', self.line_no)
@@ -876,13 +884,13 @@ class Parser:
       type = self.expression()
       self.expect(')')
       return type
-    elif check('not'):
+    elif self.check('not'):
       self.expect('not')
       fact = self.factor()
       self.emit_code(Op.NOT)
       return fact
     else:
-      error('Expected a constant, variable, parenthesized expression, or `not`; found %s' % current_symbol, self.line_no)
+      error('Expected a constant, variable, parenthesized expression, or `not`; found %s' % self.current_symbol, self.line_no)
 
   def name(self):
     self.expect('name')
