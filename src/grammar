@@ -1,5 +1,5 @@
 Module = {ImportStatement} Program
-ImportStatement = "import" Name ";"
+ImportStatement = "import" Name {"." Name} ";"
 Program = "program" ProgramName ";" BlockBody "."
 BlockBody = [ConstantDefinitionPart] [TypeDefinitionPart] [VariableDefinitionPart] {ProcedureDefinition} CompoundStatement
 ConstantDefinitionPart = "const" ConstantDefinition {ConstantDefinition}

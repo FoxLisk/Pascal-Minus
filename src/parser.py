@@ -4,6 +4,7 @@ from symbols import symbols, reverse_symbols, standard_types, standard_procs
 from first import first
 from bytecodes import Op, code_lengths, reverse_bytecodes
 from scanner import Scanner
+import os
 
 class Labeler:
   def __init__(self):
@@ -325,8 +326,11 @@ class Parser:
   def import_statement(self):
     self.expect('import');
     #for now you can only import .pm files from the same directory
-    imported = self.name()
-    tokens = Scanner(imported + ".pm").scan()
+    imported = [self.name()]
+    while self.check('.'):
+      self.expect('.')
+      imported.append(self.name())
+    tokens = Scanner(os.path.join(*imported) + ".pm").scan()
     parser = Parser(tokens, self.labeler, True)
     code = parser.parse()
     other_scope = parser.scope
