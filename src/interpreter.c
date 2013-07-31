@@ -22,7 +22,6 @@ typedef int bool;
 #define OP_GREATER 12
 #define OP_INDEX 13
 #define OP_LESS 14
-#define OP_LOCALVAR 34
 #define OP_MINUS 15
 #define OP_MODULO 16
 #define OP_MULTIPLY 17
@@ -36,13 +35,18 @@ typedef int bool;
 #define OP_PROGRAM 25
 #define OP_SUBTRACT 26
 #define OP_VALUE 27
-#define OP_SHORTVALUE 35
 #define OP_VARIABLE 28
 #define OP_VARPARAM 29
 #define OP_READ 30
 #define OP_WRITE 31
 #define OP_DEFADDR 32
 #define OP_DEFARG 33
+#define OP_LOCALVAR 34
+#define OP_SHORTVALUE 35
+#define OP_BITAND 36
+#define OP_BITOR 37
+#define OP_BITLSHIFT 38
+#define OP_BITRSHIFT 39
 
 #define STACK_SIZE 1000000
 
@@ -150,6 +154,27 @@ void modulo() {
 void multiply() {
   s--;
   stack[s] = stack[s] * stack[s + 1];
+  p++;
+}
+
+void bit_and() {
+  s--;
+  stack[s] = stack[s] & stack[s + 1];
+  p++;
+}
+void bit_or() {
+  s--;
+  stack[s] = stack[s] | stack[s + 1];
+  p++;
+}
+void bit_lshift() {
+  s--;
+  stack[s] = stack[s] << stack[s + 1];
+  p++;
+}
+void bit_rshift() {
+  s--;
+  stack[s] = stack[s] >> stack[s + 1];
   p++;
 }
 
@@ -486,6 +511,18 @@ bool interpret(char* const file_name, bool debug) {
         break;
       case OP_ENDPROG:
         running = false;
+        break;
+      case OP_BITAND:
+        bit_and();
+        break;
+      case OP_BITOR:
+        bit_or();
+        break;
+      case OP_BITLSHIFT:
+        bit_lshift();
+        break;
+      case OP_BITRSHIFT:
+        bit_rshift();
         break;
       default:
         running = false;
