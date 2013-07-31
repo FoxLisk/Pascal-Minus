@@ -102,7 +102,7 @@ class Scanner:
     if self.ch == '}':
       self.next_char()
     else:
-      error(Errors.COMMENT)
+      error('Invalid comment - missing ending `}`')
 
   def next_symbol(self):
     self.skip_separators()
