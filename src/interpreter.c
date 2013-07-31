@@ -341,8 +341,6 @@ bool interpret(char* const file_name, bool debug) {
   }
 
   stack = (int*) malloc(STACK_SIZE * sizeof(int));
-#ifdef DEBUG
-  printf("successfully loaded code\n");
   char *names[] = {
     "UNDEFINED", 
     "ADD",
@@ -381,13 +379,12 @@ bool interpret(char* const file_name, bool debug) {
     "LOCALVAR",
     "SHORTVALUE"
   };
-#endif
 
   while (running) {
     int op = program.opcodes[p];
-#ifdef DEBUG
-    printf("Handling %s [%d]\n", names[op], op);
-#endif
+    if (debug) {
+      printf("Handling %s [%d]\n", names[op], op);
+    }
     switch(op) {
       case OP_ADD:
         add();
@@ -491,13 +488,15 @@ bool interpret(char* const file_name, bool debug) {
         running = false;
         break;
     }
-#ifdef DEBUG
-    printf("Stack after: ");
-    for (int i = 0; i <= s; i++) {
-      printf("%d ", stack[i]);
+
+    if (debug) {
+      printf("Stack after: ");
+      for (int i = 0; i <= s; i++) {
+        printf("%d ", stack[i]);
+      }
+      printf("\n");
     }
-    printf("\n");
-#endif
+
   }
   return true;
 }
@@ -505,7 +504,7 @@ bool interpret(char* const file_name, bool debug) {
 int main(int argc, char* argv[]) {
   bool debug;
   for (int i = 0; i < argc; i++) {
-    if (strcmp(argv[i], "-d") == 0 || strcmp(argv[i], "--debug")) {
+    if (strcmp(argv[i], "-d") == 0 || strcmp(argv[i], "--debug") == 0) {
       debug = true;
     }
   }
