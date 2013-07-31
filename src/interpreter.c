@@ -6,7 +6,7 @@ typedef int bool;
 #define true 1
 #define false 0
 
-//#define DEBUG
+#define DEBUG
 
 #define OP_ADD 1
 #define OP_AND 2

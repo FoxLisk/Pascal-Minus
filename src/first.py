@@ -43,6 +43,8 @@ _firsts = {
   'ConstantDefinitionPart': ["const"],
   'BlockBody': ["const", "type", "var", "procedure", "begin"],
   'Program': ["program"],
+  'ImportStatement': ["import"],
+  'Module': ["import", "program"]
 }
 
 _first_symbols = {}

@@ -1,8 +1,9 @@
 from errors import Errors
 from administration_functions import error
-from symbols import symbols, reverse_symbols
+from symbols import symbols, reverse_symbols, standard_types, standard_procs
 from first import first
 from bytecodes import Op, code_lengths, reverse_bytecodes
+from scanner import Scanner
 
 class Labeler:
   def __init__(self):
@@ -127,14 +128,39 @@ class Proc:
     self.level = block_level
     self.label = label
 
-def error(msg, line_no):
-  error_msg = msg + ' on line %d' % line_no
-  raise Exception(error_msg)
+def error(msg, line_no = None):
+  if line_no is not None:
+    msg += ' on line %d' % line_no
+  raise Exception(msg)
 
 class Scope:
+  INTEGER_TYPE = IntegerType()
+  BOOLEAN_TYPE = BooleanType()
+
   def __init__(self, parent = None):
     self.scope = {'var': {}, 'const': {}, 'proc': {}, 'type': {}}
     self.parent = parent
+
+  @staticmethod
+  def default_scope():
+    scope = Scope()
+    scope.add_const('False', Scope.BOOLEAN_TYPE, 0)
+    scope.add_const('True', Scope.BOOLEAN_TYPE, 1)
+    #giving these negative labels to avoid interfering with labeling in the parser
+    scope.add_proc('Write', [Parameter('x', Scope.INTEGER_TYPE, False)], 0, -1)
+    scope.add_proc('Read', [Parameter('x', Scope.INTEGER_TYPE, True)], 0, -2)
+    
+    scope.add_type('Integer', Scope.INTEGER_TYPE)
+    scope.add_type('Boolean', Scope.BOOLEAN_TYPE)
+    return scope
+
+  def merge(self, other_scope):
+    for name, type in other_scope.scope['type'].items():
+      if name not in standard_types:
+        self.add_type(name, type)
+    for name, proc in other_scope.scope['proc'].items():
+      if name not in standard_procs:
+        self.add_proc(name, proc.params, proc.level, proc.label)
   
   def get(self, t, name):
     '''
@@ -160,7 +186,7 @@ class Scope:
 
   def add_type(self, name, type):
     if name in self.scope['type']:
-      error('Cannot redefine type %s' % name, self.line_no)
+      error('Cannot redefine type %s' % name)
     self.scope['type'][name] = type
     return type
 
@@ -191,21 +217,24 @@ class Scope:
       error('Cannot redefine variable %s' % name, self.line_no)
     self.scope['var'][param.name] = param
 
+  def __str__(self):
+    return str(self.scope)
+
 class Parser:
-  def __init__(self, symbol_list):
-    self.labeler = Labeler()
+  def __init__(self, symbol_list, labeler = None, is_import = False):
+    if labeler is None:
+      self.labeler = Labeler()
+    else:
+      self.labeler = labeler
+
+    self.is_import = is_import
     self.symbols = self._next_symbol(symbol_list)
-    self.scope = Scope()
+    self.scope = Scope.default_scope()
+    print self.scope
     self.block_level = 0
     self.bytecodes = []
     self.current_symbol = None
     self.line_no = 0
-    itype = self.scope.add_type('Integer', IntegerType())
-    btype = self.scope.add_type('Boolean', BooleanType())
-    self.scope.add_const('False', btype, 0)
-    self.scope.add_const('True', btype, 1)
-    self.scope.add_proc('Write', [Parameter('x', itype, False)], self.block_level, self.labeler.new_label())
-    self.scope.add_proc('Read', [Parameter('x', itype, True)], self.block_level, self.labeler.new_label())
 
   def push_scope(self):
     #print 'push_scope'
@@ -285,17 +314,36 @@ class Parser:
     code = symbols[symbol]
     return self.current_symbol == code
 
-  def program(self):
-    #print 'program'
-    self.expect('program')
+  def module(self):
     var_label = self.labeler.new_label()
     begin_label = self.labeler.new_label()
+    if not self.is_import:
+      self.emit_code(Op.PROGRAM, var_label, begin_label)
+    while self.current_symbol in first('ImportStatement'):
+      self.import_statement()
+    self.program(var_label, begin_label)
+
+  def import_statement(self):
+    self.expect('import');
+    #for now you can only import .pm files from the same directory
+    imported = self.name()
+    tokens = Scanner(imported + ".pm").scan()
+    parser = Parser(tokens, self.labeler, True)
+    code = parser.parse()
+    other_scope = parser.scope
+    self.scope.merge(other_scope)
+    self.bytecodes.extend(code)
+    self.expect(';')
+
+  def program(self, var_label, begin_label):
+    #print 'program'
+    self.expect('program')
     program_name = self.name()
     self.expect(';')
-    self.emit_code(Op.PROGRAM, var_label, begin_label)
     self.block_body(var_label, begin_label)
     self.expect('.')
-    self.emit_code(Op.ENDPROG)
+    if not self.is_import:
+      self.emit_code(Op.ENDPROG)
 
   def block_body(self, var_label, begin_label):
     #print 'block_body'
@@ -530,6 +578,7 @@ class Parser:
     if len(params) != len(proc.params):
       error('`%s` takes %d parameters; %d given' % (proc_name, len(proc.params), len(params)), self.line_no)
     for i in range(len(params)):
+      print params[i], proc.params[i].type
       if params[i] != proc.params[i].type: 
         error('Parameter %d passed to `%s` is of type `%s`; expecting `%s`' % (i + 1, proc_name, params[i], proc.params[i].type), self.line_no)
     if proc.name == 'Write':
@@ -881,5 +930,5 @@ class Parser:
       
   def parse(self):
     self.next_symbol()
-    self.program()
+    self.module()
     return self.bytecodes

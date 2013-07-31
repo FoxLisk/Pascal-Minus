@@ -1,5 +1,7 @@
-Program: Empty
-BlockBody: "." ";"
+Module:                 Empty
+ImportStatement:        "import" "program"
+Program:                Empty
+BlockBody:              "." ";"
 ConstantDefinitionPart: "type" "var" "procedure" "begin"
 ConstantDefinition:     Name "type" "var" "procedure" "begin"
 TypeDefinitionPart:     "var" "procedure" "begin"
