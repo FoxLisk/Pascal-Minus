@@ -46,11 +46,16 @@ def compile_pascal(source, dest, is_debug = False, is_interpret = False, out_str
 
 def main():
   source = sys.argv[1]
-  dest = sys.argv[2]
   is_debug = '-d' in sys.argv or '--debug' in sys.argv
   interpret = '-i' in sys.argv or '--interpret' in sys.argv
   output_tokens = '-t' in sys.argv or '--tokens' in sys.argv
   output_bytecodes = '-b' in sys.argv or '--bytecodes' in sys.argv
+  dest = source + 'c'
+  if '-o' in sys.argv:
+    i = sys.argv.index('-o') + 1
+    if i < len(sys.argv):
+      dest = sys.argv[i]
+
   compile_pascal(source, dest, is_debug, interpret, sys.stdout, output_tokens, output_bytecodes)
 
 if __name__ == '__main__':
