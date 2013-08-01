@@ -41,5 +41,4 @@ procedure WriteInt(num : Integer);
     WritePos(num)
   end;
 begin
-  WriteInt(-1234567890)
 end.

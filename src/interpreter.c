@@ -67,6 +67,10 @@ bool get_code(char* const file_name) {
   int code_length = 0;
 
   FILE *fp = fopen(file_name, "r");
+  if (fp == NULL) {
+    printf("Could not open file %s for reading", file_name);
+    return false;
+  }
   while (true) {
     if (code_length == code_size) {
       int new_size = code_size * 2;
@@ -546,6 +550,13 @@ bool interpret(char* const file_name, bool debug) {
 }
 
 int main(int argc, char* argv[]) {
+  if (argc < 2) {
+    printf("Error: must provide filename as first argument");
+    exit(1);
+  }
+
+  char* file_name = argv[1];
+
   bool debug;
   for (int i = 0; i < argc; i++) {
     if (strcmp(argv[i], "-d") == 0 || strcmp(argv[i], "--debug") == 0) {
@@ -553,8 +564,9 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  char* file_name = argv[1];
   if (!interpret(file_name, debug)) {
     printf("Error interpreting `%s`", file_name);
   }
+
+  return 0;
 }

@@ -16,6 +16,7 @@ procedure NextInt(var n : Integer);
     n := lastNum
   end;
 begin 
+{
   SeedRandom(13);
   i := 0;
   while i < 100 do
@@ -25,4 +26,5 @@ begin
       Write(10);
       i := i + 1
     end;
+}
 end.

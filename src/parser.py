@@ -4,7 +4,9 @@ from symbols import symbols, reverse_symbols, standard_types, standard_procs
 from first import first
 from bytecodes import Op, code_lengths, reverse_bytecodes
 from scanner import Scanner
+from copy import copy
 import os
+import traceback
 
 class Labeler:
   def __init__(self):
@@ -139,8 +141,20 @@ class Scope:
   BOOLEAN_TYPE = BooleanType()
 
   def __init__(self, parent = None):
-    self.scope = {'var': {}, 'const': {}, 'proc': {}, 'type': {}}
+    self.vars = {}
+    self.consts = {}
+    self.procs = {}
+    self.types = {}
     self.parent = parent
+
+  def __str__(self):
+    out = 'Scope:\n'
+    out += '  vars: ' + str(self.vars)
+    out += '\n  consts: ' + str(self.consts)
+    out += '\n procs: ' + str(self.procs)
+    out += '\n types: ' + str(self.types)
+    out += '\n Parent: \n' + str(self.parent)
+    return out
 
   @staticmethod
   def default_scope():
@@ -155,14 +169,12 @@ class Scope:
     scope.add_type('Boolean', Scope.BOOLEAN_TYPE)
     return scope
 
-  def merge(self, other_scope):
-    for name, type in other_scope.scope['type'].items():
-      if name not in standard_types:
-        self.add_type(name, type)
-    for name, proc in other_scope.scope['proc'].items():
-      if name not in standard_procs:
-        self.add_proc(name, proc.params, proc.level, proc.label)
-  
+  def get_copy_for_import(self):
+    scope = Scope()
+    scope.types = self.types
+    scope.procs = self.procs
+    return scope
+
   def get(self, t, name):
     '''
     t is the type: var, proc, const
@@ -170,15 +182,24 @@ class Scope:
 
     returns the saught value if found, or None
     '''
-    if name in self.scope[t]:
-      return self.scope[t][name]
+    if t == 'var':
+      lookup = self.vars
+    elif t == 'type':
+      lookup = self.types
+    elif t == 'proc':
+      lookup = self.procs
+    elif t == 'const':
+      lookup = self.consts
+
+    if name in lookup:
+      return lookup[name]
 
     if self.parent is None:
       return None
     return self.parent.get(t, name)
 
   def is_var(self, name):
-    f = self.scope.get('var', name)
+    f = self.get('var', name)
     return f is not None
 
   def is_const(self, name):
@@ -186,56 +207,61 @@ class Scope:
     return f is not None
 
   def add_type(self, name, type):
-    if name in self.scope['type']:
+    if name in self.types:
       error('Cannot redefine type %s' % name)
-    self.scope['type'][name] = type
+    self.types[name] = type
     return type
 
   def add_const(self, name, type, value):
-    if name in self.scope['const']:
-      error('Cannot redefine constant %s' % name, self.line_no)
-    self.scope['const'][name] = Constant(name, type, value)
+    if name in self.consts:
+      error('Cannot redefine constant %s' % name)
+    self.consts[name] = Constant(name, type, value)
 
   def add_var(self, name, type):
-    if name in self.scope['var']:
-      error('Cannot redefine variable %s' % name, self.line_no)
+    if name in self.vars:
+      error('Cannot redefine variable %s' % name)
     var = Variable(name, type)
-    self.scope['var'][name] = var
+    self.vars[name] = var
     return var
 
   def add_proc(self, name, params, level, label):
-    if name in self.scope['proc']:
-      error('Cannot redefine procedure %s' % name, self.line_no)
+    if name in self.procs:
+      error('Cannot redefine procedure %s' % name)
     proc = Proc(name, params, level, label)
-    self.scope['proc'][name] = proc
+    self.procs[name] = proc
     return proc
 
   def add_param(self, param):
     '''
     adds a parameter object as a variable for the current scope
     '''
-    if param.name in self.scope['var']:
-      error('Cannot redefine variable %s' % name, self.line_no)
-    self.scope['var'][param.name] = param
-
-  def __str__(self):
-    return str(self.scope)
+    if param.name in self.vars:
+      error('Cannot redefine variable %s' % name)
+    self.vars[param.name] = param
 
 class Parser:
-  def __init__(self, symbol_list, labeler = None, is_import = False, lib = ['.']):
-    if labeler is None:
-      self.labeler = Labeler()
-    else:
-      self.labeler = labeler
-
+  def __init__(self, symbol_list, filename, lib = ['.']):
+    self.filename = filename
     self.lib = lib
-    self.is_import = is_import
+    self.is_import = False
     self.symbols = self._next_symbol(symbol_list)
-    self.scope = Scope.default_scope()
-    self.block_level = 0
+    self.scope = Scope.default_scope() #this is unnecessary but fairly painless
+    self.labeler = Labeler() #same
+    self.block_level = 0 #this will be fine even for import sub_parsers, because those will always happen at top level
     self.bytecodes = []
     self.current_symbol = None
     self.line_no = 0
+    self.imported = set()
+
+  def create_sub_parser(self, tokens, filename):
+    sub_parser = Parser(tokens, filename)
+    sub_parser.labeler = self.labeler #no repeat labels
+    sub_parser.is_import = True
+    sub_parser.lib = self.lib
+    sub_parser.imported = self.imported
+    sub_parser.scope = self.scope.get_copy_for_import() #we want to add any new functions to our existing scope
+    return sub_parser
+
 
   def push_scope(self):
     #print 'push_scope'
@@ -324,27 +350,42 @@ class Parser:
       self.import_statement()
     self.program(var_label, begin_label)
 
+  def is_imported(self, import_path):
+    return '.'.join(import_path) in self.imported
+
+  def add_imported_path(self, import_path):
+    self.imported.add('.'.join(import_path))
+
   def import_statement(self):
     self.expect('import');
     #for now you can only import .pm files from the same directory
-    imported = [self.name()]
+    import_path = [self.name()]
     while self.check('.'):
       self.expect('.')
-      imported.append(self.name())
+      import_path.append(self.name())
+    if not self.is_imported(import_path):
+      self.import_lib(import_path)
+    self.expect(';')
+
+  def import_lib(self, import_path):
+    '''
+    import_path is a list of part names, like:
+    ['lib', 'writeint']
+    '''
     tokens = None
     for loc in self.lib:
-      path = os.path.join(loc, *imported) + '.pm'
+      path = os.path.join(loc, *import_path) + '.pm'
       if os.path.isfile(path):
         tokens = Scanner(path).scan()
         break
     if tokens is None:
-      error('Unable to find `%s` in any libraries (checked %s)' % ('.'.join(imported), ':'.join(self.lib)))
-    parser = Parser(tokens, self.labeler, True)
-    code = parser.parse()
-    other_scope = parser.scope
-    self.scope.merge(other_scope)
+      error('Unable to find `%s` in any libraries (checked %s)' % ('.'.join(import_path), ':'.join(self.import_path)))
+    parser = self.create_sub_parser(tokens, path)
+    code, success = parser.parse()
+    if not success:
+      error('Parsing error in import %s' % '.'.join(import_path))
     self.bytecodes.extend(code)
-    self.expect(';')
+    self.add_imported_path(import_path)
 
   def program(self, var_label, begin_label):
     #print 'program'
@@ -948,5 +989,10 @@ class Parser:
       
   def parse(self):
     self.next_symbol()
-    self.module()
-    return self.bytecodes
+    try:
+      self.module()
+    except:
+      print 'Caught exception parsing %s on line %d: %s' % (self.filename, self.line_no, traceback.format_exc())
+      return self.bytecodes, False
+
+    return self.bytecodes, True

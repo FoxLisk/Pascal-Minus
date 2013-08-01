@@ -23,13 +23,16 @@ def compile_pascal(source, dest, is_debug = False, is_interpret = False, out_str
   if output_tokens:
     write(tokens, source + "_tokenized")
   debug('scanning complete')
-  parser = Parser(tokens, lib = lib)
-  bytecodes = parser.parse()
+  parser = Parser(tokens, source, lib = lib)
+  bytecodes, success = parser.parse()
   if output_bytecodes:
     if is_debug:
       write(prettify(bytecodes), source + "_unassembled")
     else:
       write(bytecodes, source + "_unassembled")
+  if not success:
+    print 'Parsing error'
+    return
   debug('parsing complete')
   assembler = Assembler(bytecodes)
   assembled = assembler.assemble()
