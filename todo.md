@@ -1,4 +1,3 @@
-* bitwise operators
 * strings
 * importing is iffy
 * array initializer literals
