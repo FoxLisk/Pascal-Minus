@@ -1,5 +1,5 @@
 * strings
-* importing is iffy
+* importing is fine, but really should probably be handled via linking rather than compile-time imports. low priority.
 * array initializer literals
 * for loop
 * operator precedence should be taken more seriously
