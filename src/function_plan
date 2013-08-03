@@ -1,0 +1,48 @@
+Procedure calls currently work like so:
+
+1. Push actual parameter list onto stack (in order, accounting for var params, etc)
+
+2. Handling the PROCCALL itself pushes the stack pointer forward, creates a new activation record, and jumps to the corresponding PROCEDURE opcode
+
+3. The PROCEDURE opcode just clears enough space on the stack for local variables, and then jumps to the start of the procedure
+
+4. ...the code in the procedure is executed in order
+
+5. the program pointer returns to wherever was stored as the return address when the activation record was created, and the static/dynamic links are moved around appropriately
+
+Function calls need to work the same except keep space open somewhere for the return value, and then fill that space with whatever.
+
+So I think the idea is to, when invoking a function, rather than a procedure, is to just store a bunch of empty space on the top of the stack for the return value, and then populate that when we find a RETURN from the function. So the RETURN opcode will be of the form [RETURN, length] where length is the length of the return value. When this is encountered, the value that is to be returned is copied to the blank space on top of the stack that was reserved for it, and then the stuff at the end of ENDPROC is executed. ENDPROC should probably be replaced with RETURN 0, but... that might be a next-iteration idea
+
+example:
+
+function foo : Integer;
+  begin
+    return 5;
+  end;
+
+would generate opcode like the following:
+
+FUNCTION 0* 4** 1***
+CONSTANT 5
+RETURN 1****
+
+*no vars
+**no procs or anything inside it so the displacement to the beginning of the function is just 3
+***length of the return value
+****length of return value type
+
+and invoking it would be something like
+
+FUNCCALL 0 -13* 1**
+
+*making up block level and displ
+**return length
+
+After the function call top of stack would point to the _end_ of the returned value (just like when you do VALUE on an array or whatever). Thus if you did like
+
+    procedure some_proc(x : longArrayType, y : Integer); {...}
+    function func : longArrayType; {...}
+    some_proc(func, 5);
+
+then when you call some_proc, the long array value would just like go on top of the stack as expected.

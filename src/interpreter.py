@@ -182,7 +182,7 @@ class Interpreter:
       #self.error('At end of procedure call stack should be empty')
       pass
     self.p = self.store[self.b + 2] #move p to the value stored in b + 2, which is the return address
-    self.s = self.b #move the stack pointer back to b - b, when a proc call starts, points
+    self.s = self.b #move the stack pointer back to b: b, when a proc call starts, points
                     #to the new activation record (which is the top of the stack), so b
                     #holds the top of the stack [after params were pushed] before the proc call
     self.s -= param_length + 1 #move the stack pointer back past all the params
