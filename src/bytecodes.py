@@ -38,7 +38,10 @@ class Op:
   BITOR = 37
   BITLSHIFT = 38
   BITRSHIFT = 39
-
+  RETURN = 40
+  FUNCTION = 41
+  FUNCCALL = 42
+  RETURNSPACE = 44
 
 reverse_bytecodes = {
   1: 'ADD',
@@ -79,7 +82,11 @@ reverse_bytecodes = {
   36: 'BITAND',
   37: 'BITOR',
   38: 'BITLSHIFT',
-  39: 'BITRSHIFT'
+  39: 'BITRSHIFT',
+  40: 'RETURN',
+  41: 'FUNCTION',
+  42: 'FUNCCALL',
+  44: 'RETURNSPACE'
 }
 
 bytecodes = {y:x for x, y in reverse_bytecodes.items()}
@@ -125,5 +132,8 @@ code_lengths = {
   Op.BITOR: 1,
   Op.BITLSHIFT: 1,
   Op.BITRSHIFT: 1,
-
+  Op.RETURN: 3,
+  Op.FUNCTION: 4,
+  Op.FUNCCALL: 4,
+  Op.RETURNSPACE: 2
 }

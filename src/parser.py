@@ -87,6 +87,13 @@ class RecordType(Type):
       else:
         displ += type.length()
 
+class VoidType(Type):
+  def __init__(self):
+    super(VoidType, self).__init__('void')
+
+  def length(self):
+    return 0
+
 class Constant:
   def __init__(self, name, type, value):
     self.name = name
@@ -122,7 +129,7 @@ class Parameter:
     return 'Parameter %s : %s | level %d | displ %d' % (self.name, self.type.name, self.level, self.displ)
 
 class Proc:
-  def __init__(self, name, params, block_level, label):
+  def __init__(self, name, params, block_level, label, return_type):
     '''
     params should be a list of Parameter objects
     '''
@@ -130,6 +137,17 @@ class Proc:
     self.params = params
     self.level = block_level
     self.label = label
+    self.return_type = return_type
+
+  def return_length(self):
+    if self.return_type is None:
+      return 0
+    else:
+      return self.return_type.length()
+
+  def param_length(self):
+    param_length = sum(map(lambda p: 1 if p.is_var_param else p.length(), self.params))
+    return param_length
 
 def error(msg, line_no = None):
   if line_no is not None:
@@ -139,6 +157,7 @@ def error(msg, line_no = None):
 class Scope:
   INTEGER_TYPE = IntegerType()
   BOOLEAN_TYPE = BooleanType()
+  VOID_TYPE    = VoidType()
 
   def __init__(self, parent = None):
     self.vars = {}
@@ -162,11 +181,12 @@ class Scope:
     scope.add_const('False', Scope.BOOLEAN_TYPE, 0)
     scope.add_const('True', Scope.BOOLEAN_TYPE, 1)
     #giving these negative labels to avoid interfering with labeling in the parser
-    scope.add_proc('Write', [Parameter('x', Scope.INTEGER_TYPE, False)], 0, -1)
-    scope.add_proc('Read', [Parameter('x', Scope.INTEGER_TYPE, True)], 0, -2)
+    scope.add_proc('Write', [Parameter('x', Scope.INTEGER_TYPE, False)], 0, -1, Scope.VOID_TYPE)
+    scope.add_proc('Read', [Parameter('x', Scope.INTEGER_TYPE, True)], 0, -2, Scope.VOID_TYPE)
     
     scope.add_type('Integer', Scope.INTEGER_TYPE)
     scope.add_type('Boolean', Scope.BOOLEAN_TYPE)
+    scope.add_type('void', Scope.VOID_TYPE)
     return scope
 
   def get_copy_for_import(self):
@@ -174,6 +194,13 @@ class Scope:
     scope.types = self.types
     scope.procs = self.procs
     return scope
+
+  def get_type(self, name):
+    if name in self.types:
+      return self.types[name]
+
+  def get_func(self, name):
+    return self.get('proc', name)
 
   def get(self, t, name):
     '''
@@ -206,6 +233,10 @@ class Scope:
     f = self.get('const', name)
     return f is not None
 
+  def is_func(self, name):
+    f = self.get_func(name)
+    return f is not None
+
   def add_type(self, name, type):
     if name in self.types:
       error('Cannot redefine type %s' % name)
@@ -224,10 +255,10 @@ class Scope:
     self.vars[name] = var
     return var
 
-  def add_proc(self, name, params, level, label):
+  def add_proc(self, name, params, level, label, return_type = None):
     if name in self.procs:
       error('Cannot redefine procedure %s' % name)
-    proc = Proc(name, params, level, label)
+    proc = Proc(name, params, level, label, return_type)
     self.procs[name] = proc
     return proc
 
@@ -252,6 +283,7 @@ class Parser:
     self.current_symbol = None
     self.line_no = 0
     self.imported = set()
+    self.current_proc = []
 
   def create_sub_parser(self, tokens, filename):
     sub_parser = Parser(tokens, filename)
@@ -391,6 +423,8 @@ class Parser:
     #print 'program'
     self.expect('program')
     program_name = self.name()
+    prog = Proc(program_name, [], 0, begin_label, self.scope.get_type('void'))
+    self.current_proc.append(prog)
     self.expect(';')
     self.block_body(var_label, begin_label)
     self.expect('.')
@@ -408,20 +442,59 @@ class Parser:
       vars = self.variable_definition_part()
     else:
       vars = []
-    while self.current_symbol in first('ProcedureDefinition'):
-      self.procedure_definition()
+    while self.current_symbol in first('ProcedureDefinition') \
+        or self.current_symbol in first('FunctionDefinition'):
+          if self.current_symbol in first('ProcedureDefinition'):
+            self.procedure_definition()
+          else:
+            self.function_definition()
     self.emit_code(Op.DEFADDR, begin_label)
     var_length = sum(map(lambda var: var.length(), vars))
     self.emit_code(Op.DEFARG, var_label, var_length)
     self.compound_statement()
 
+  def function_definition(self):
+    self.expect('function')
+    func_name = self.name()
+    params = []
+    if self.check('('):
+      self.expect('(')
+      params = self.formal_parameter_list()
+      self.expect(')')
+    self.expect(':')
+
+    self.parameter_addressing(params)
+    for param in params:
+      self.scope.add_param(param)
+    
+    return_type_name = self.name()
+    return_type = self.scope.get_type(return_type_name);
+
+    func = self.scope.add_proc(func_name, params, self.block_level, self.labeler.new_label(), return_type)
+    self.current_proc.append(func)
+    self.expect(';')
+
+    var_length_label = self.labeler.new_label()
+    begin_label = self.labeler.new_label()
+
+    self.emit_code(Op.DEFADDR, func.label)
+    self.emit_code(Op.FUNCTION, var_length_label, begin_label, return_type.length())
+
+    self.block_body(var_length_label, begin_label)
+    self.expect(';')
+
+    param_length = sum(map(lambda p: 1 if p.is_var_param else p.length(), params))
+
+    self.emit_code(Op.RETURN, param_length, return_type.length())
+    #TODO this will just leave junk values if user doesn't RETURN explicitly...
+    self.current_proc.pop()
+
   def procedure_definition(self):
     self.expect('procedure')
     proc_name = self.name()
-    var_label = self.labeler.new_label()
-    begin_label = self.labeler.new_label()
     self.procedure_block(proc_name)
     self.expect(';')
+    self.current_proc.pop()
 
   def procedure_block(self, proc_name):
     params = []
@@ -429,7 +502,8 @@ class Parser:
       self.expect('(')
       params = self.formal_parameter_list()
       self.expect(')')
-    proc = self.scope.add_proc(proc_name, params, self.block_level, self.labeler.new_label())
+    proc = self.scope.add_proc(proc_name, params, self.block_level, self.labeler.new_label(), self.scope.get_type('void'))
+    self.current_proc.append(proc)
     self.push_scope()
     self.parameter_addressing(params)
     for param in params:
@@ -440,13 +514,13 @@ class Parser:
     #proc.label should be the address of the beginning of the procedure code
     #that's what's passed in to block body so we use that here
     self.emit_code(Op.DEFADDR, proc.label)
-    self.emit_code(Op.PROCEDURE, var_length_label, begin_label)
+    self.emit_code(Op.FUNCTION, var_length_label, begin_label, 0)
     #print "%s: var %d begin %d" % (proc_name, var_length_label, begin_label
     self.block_body(var_length_label, begin_label)
 
     param_length = sum(map(lambda p: 1 if p.is_var_param else p.length(), params))
 
-    self.emit_code(Op.ENDPROC, param_length)
+    self.emit_code(Op.ENDFUNC, param_length, 0)
     self.pop_scope()
 
   def formal_parameter_list(self):
@@ -555,6 +629,8 @@ class Parser:
       self.while_statement()
     elif self.check('begin'):
       self.compound_statement()
+    elif self.check('return'):
+      self.return_statement()
 
   def assignment_statement(self, name):
     #print 'assignment_statement'
@@ -619,10 +695,11 @@ class Parser:
     #print 'procedure_statement'
     #name has already been consumed in figuring out whether we're in
     #assignment or procedure statement
-    proc = self.scope.get('proc', proc_name)
+    proc = self.scope.get_func(proc_name)
     if proc is None:
-      error('trying to call nonexistent procedure', self.line_no)
+      error('trying to call nonexistent procedure %s' % proc_name, self.line_no)
     params = []
+    self.emit_code(Op.RETURNSPACE, proc.return_length())
     if self.check('('):
       self.expect('(')
       params = self.actual_parameter_list(proc)
@@ -634,10 +711,13 @@ class Parser:
         error('Parameter %d passed to `%s` is of type `%s`; expecting `%s`' % (i + 1, proc_name, params[i], proc.params[i].type), self.line_no)
     if proc.name == 'Write':
       self.emit_code(Op.WRITE)
+      return None #TODO probably want a real void type
     elif proc.name == 'Read':
       error('Read not implemented', self.line_no)
+      return None #TODO probably want a real void type
     else:
-      self.emit_code(Op.PROCCALL, self.block_level - proc.level, proc.label)
+      self.emit_code(Op.FUNCCALL, self.block_level - proc.level, proc.label, proc.return_length())
+      return proc.return_type #TODO probably want a real void type
 
   def actual_parameter_list(self, proc):
     '''
@@ -707,6 +787,22 @@ class Parser:
     self.statement()
     self.emit_code(Op.GOTO, start_label)
     self.emit_code(Op.DEFADDR, jump_label)
+
+  def get_current_proc(self):
+    return self.current_proc[-1]
+
+  def return_statement(self):
+    self.expect('return')
+    return_type = self.scope.get_type('void')
+    if self.current_symbol in first('Expression'):
+      return_type = self.expression()
+
+    proc = self.get_current_proc()
+    expected_type = proc.return_type
+    if expected_type != return_type:
+      error('Expected type %s does not match return type %s' % (str(expected_type), str(return_type)))
+    self.emit_code(Op.RETURN, proc.param_length(), return_type.length())
+
 
   def constant_definition_part(self):
     #print 'constant_definition_part'
@@ -922,6 +1018,8 @@ class Parser:
         else:
           self.emit_code(Op.VALUE, l)
         return type
+      elif self.scope.is_func(factor_name):
+        return self.procedure_statement(factor_name)
       else:
         error("Cannot find constant or variable named %s" % factor_name, self.line_no)
     elif self.current_symbol in first('Numeral'):

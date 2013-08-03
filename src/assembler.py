@@ -34,7 +34,9 @@ skip_codes = {
   Op.BITAND,
   Op.BITOR,
   Op.BITLSHIFT,
-  Op.BITRSHIFT
+  Op.BITRSHIFT,
+  Op.RETURN, 
+  Op.RETURNSPACE
 }
 
 class Assembler:
@@ -100,6 +102,18 @@ class Assembler:
         self.assembled.append(var_length)
         self.assembled.append(begin_displ)
         i += 3
+      elif op == Op.FUNCTION:
+        var_label = self.pseudos_replaced[i + 1]
+        begin_label = self.pseudos_replaced[i + 2]
+        return_length = self.pseudos_replaced[i + 3]
+        var_length = self.labels[var_label]
+        begin_displ = self.labels[begin_label] - i
+        debug('Handling function call: var label %d, length %d | being label %d, displ %d' % (var_label, var_length, begin_label, begin_displ))
+        self.assembled.append(op)
+        self.assembled.append(var_length)
+        self.assembled.append(begin_displ)
+        self.assembled.append(return_length)
+        i += 4
       elif op == Op.DO or op == Op.GOTO:
         label = self.pseudos_replaced[i + 1]
         displ = self.labels[label] - i
@@ -110,10 +124,15 @@ class Assembler:
         level = self.pseudos_replaced[i + 1]
         label = self.pseudos_replaced[i + 2]
         displ = self.labels[label] - i
-        self.assembled.append(op)
-        self.assembled.append(level)
-        self.assembled.append(displ)
+        self.assembled.extend([op, level, displ])
         i += 3
+      elif op == Op.FUNCCALL:
+        level = self.pseudos_replaced[i + 1]
+        label = self.pseudos_replaced[i + 2]
+        length = self.pseudos_replaced[i + 3]
+        displ = self.labels[label] - i
+        self.assembled.extend([op, level, displ, length])
+        i += 4
       else:
         raise Exception("Found unexpected operation %s" % bytecodes[op])
 

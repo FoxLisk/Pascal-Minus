@@ -1,7 +1,7 @@
 Module = {ImportStatement} Program
 ImportStatement = "import" Name {"." Name} ";"
 Program = "program" ProgramName ";" BlockBody "."
-BlockBody = [ConstantDefinitionPart] [TypeDefinitionPart] [VariableDefinitionPart] {ProcedureDefinition} CompoundStatement
+BlockBody = [ConstantDefinitionPart] [TypeDefinitionPart] [VariableDefinitionPart] {ProcedureDefinition | FunctionDefinition} CompoundStatement
 ConstantDefinitionPart = "const" ConstantDefinition {ConstantDefinition}
 ConstantDefinition = ConstantName "=" Constant ";"
 TypeDefinitionPart = "type" TypeDefinition {TypeDefinition}
@@ -15,11 +15,12 @@ RecordSection = FieldName {"," FieldName} ":" TypeName
 VariableDefinitionPart = "var" VariableDefinition {VariableDefinition}
 VariableDefinition = VariableGroup ";"
 VariableGroup = VariableName {"," VariableName} ":" TypeName
+FunctionDefinition = "function" FunctionName ["(" FormalParameterList ")"] ":" TypeName ";" BlockBody
 ProcedureDefinition = "procedure" ProcedureName ProcedureBlock ";"
 ProcedureBlock = ["(" FormalParameterList ")"] ";" BlockBody
 FormalParameterList = ParameterDefinition {";" ParameterDefinition}
 ParameterDefinition = ["var"] VariableGroup
-Statement = AssignmentStatement | ProcedureStatement | IfStatement | WhileStatement | CompoundStatement | Empty
+Statement = AssignmentStatement | ProcedureStatement | IfStatement | WhileStatement | CompoundStatement | ReturnStatement | Empty
 AssignmentStatement = VariableAccess ":=" Expression
 ProcedureStatement = ProcedureName ["(" ActualParameterList ")"]
 ActualParameterList = ActualParameter {"," ActualParameter}
@@ -27,6 +28,7 @@ ActualParameter = Expression
 IfStatement = "if" Expression "then" Statement ["else" Statement]
 WhileStatement = "while" Expression "do" Statement
 CompoundStatement = "begin" Statement {";" Statement} "end"
+ReturnStatement = "return" [Expression]
 Expression = SimpleExpression [RelationalOperator SimpleExpression]
 RelationalOperator = "<" | "=" | ">" | "<=" | "<>" | ">="
 SimpleExpression = [SignOperator] Term {AddingOperator Term}
@@ -34,7 +36,7 @@ SignOperator = "+" | "-"
 AddingOperator = "+" | "-" | "or"
 Term = Factor {MultiplyingOperator Factor}
 MultiplyingOperator: "*" | "div" | "mod" | "and" | "|" | "&" | "<<" | ">>"
-Factor = Constant | VariableAccess | "(" Expression ")" | "not" Factor
+Factor = Constant | VariableAccess | "(" Expression ")" | "not" Factor | ProcedureStatement
 VariableAccess = VariableName {Selector}
 Selector = IndexedSelector | FieldSelector
 IndexedSelector = "[" Expression "]"
@@ -45,4 +47,6 @@ FieldName = Name
 ConstantName = Name
 VariableName = Name
 ProcedureName = Name
+FunctionName = Name
+TypeName = Name
 Name = Letter {Letter | Digit}

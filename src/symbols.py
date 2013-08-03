@@ -1,4 +1,4 @@
-symbols = ['and', 'array', '*', ':=', 'begin', ':', ',', 'const', 'div', 'do', '..', 'else', 'end', 'endtext', '=', '>', 'if', '[', '(', '<', '-', 'mod', 'name', '\n', 'not', '<>', '<=', '>=', 'numeral', 'of', 'or', '.', '+', 'procedure', 'program', 'record', ']', ')', ';', 'then', 'type', 'var', 'while', 'unknown', 'import', '|', '&', '<<', '>>']
+symbols = ['and', 'array', '*', ':=', 'begin', ':', ',', 'const', 'div', 'do', '..', 'else', 'end', 'endtext', '=', '>', 'if', '[', '(', '<', '-', 'mod', 'name', '\n', 'not', '<>', '<=', '>=', 'numeral', 'of', 'or', '.', '+', 'procedure', 'program', 'record', ']', ')', ';', 'then', 'type', 'var', 'while', 'unknown', 'import', '|', '&', '<<', '>>', 'return', 'function']
 symbols = {x: x for x in symbols}
 reverse_symbols = {y:x for x, y in symbols.items()}
 
