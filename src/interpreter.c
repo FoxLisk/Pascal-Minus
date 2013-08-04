@@ -62,7 +62,7 @@ int* stack;
 code program;
 bool running = true;
 
-bool get_code(char* const file_name) {
+bool get_code(char* const file_name, int *length) {
   int code_size = 1000;
   int* code = (int*) malloc(code_size * sizeof(int));
   int code_length = 0;
@@ -97,6 +97,7 @@ bool get_code(char* const file_name) {
 
   program.opcodes = final_code;
   program.length = code_length;
+  *length = code_length;
   return true;
 }
 
@@ -380,12 +381,16 @@ void return_space(int displ) {
 }
 
 bool interpret(char* const file_name, bool debug) {
-  bool success = get_code(file_name);
+  int l;
+  bool success = get_code(file_name, &l);
   if (!success) {
     return false;
   }
 
   stack = (int*) malloc(STACK_SIZE * sizeof(int));
+  stack[0] = 0; 
+  stack[1] = 0;
+  stack[2] = l - 1;
   char *names[] = {
     "UNDEFINED", 
     "ADD",

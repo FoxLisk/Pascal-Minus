@@ -21,6 +21,10 @@ class Interpreter:
     self.stack_size = stack_size
     self.store = [-99999] * stack_size
 
+    self.store[0] = 0
+    self.store[1] = 0
+    self.store[2] = len(self.code) - 1
+
   def error(self, msg):
     print 'FATAL ERROR: STACK'
     print self.store[0:self.s + 1]

@@ -35,7 +35,8 @@ test_cases = [
   ('bitwise', '2\n1\n7\n4\n'),
   ('lib/writeint_test', '12345'),
   ('lib/abs_test', '11'),
-  ('long_return', 'ABCDEFGHIJ')
+  ('long_return', 'ABCDEFGHIJ'),
+  ('early_return', 'A')
 ]
 
 subprocess.call(['gcc', '../interpreter.c', '-std=c99', '-Wall', '-pedantic', '-o', 'pascalvm'])
@@ -43,12 +44,11 @@ subprocess.call(['gcc', '../interpreter.c', '-std=c99', '-Wall', '-pedantic', '-
 errors = []
 c_errors = []
 
+i = 0
 for fn, expected in test_cases:
-  '''
-  compile_pascal('cases/%s.pm' % fn, 'dest', False, True, stream)
-  if stream.val() != expected:
-    errors.append("Test case %s failed: Expected `%s`, found `%s`" % (fn, expected, stream.val()))
-    '''
+  i += 1
+  if i % 10 == 0:
+    print 'Ran %d/%d cases' % (i, len(test_cases))
   try: 
     compile_pascal('cases/%s.pm' % fn, 'dest', is_interpret = True, out_stream = stream, lib = ['..'])
     if stream.val() != expected:
@@ -60,6 +60,8 @@ for fn, expected in test_cases:
   except:
     errors.append('Caught exception in test case %s:\n  %s' % (fn, traceback.format_exc()))
   stream.reset()
+
+print 'Ran %d cases' % len(test_cases)
 
 if len(errors) > 0:
   print 'Found errors:'
