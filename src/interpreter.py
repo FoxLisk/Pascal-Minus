@@ -15,7 +15,7 @@ class Interpreter:
       self.code = copy(code)
     self.p = 0
     self.b = 0
-    self.s = 3
+    self.s = 4
     self.out = out
 
     self.stack_size = stack_size
