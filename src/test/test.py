@@ -34,7 +34,8 @@ test_cases = [
   ('recursion', 'ABCDEFGHIJK'),
   ('bitwise', '2\n1\n7\n4\n'),
   ('lib/writeint_test', '12345'),
-  ('lib/abs_test', '11')
+  ('lib/abs_test', '11'),
+  ('long_return', 'ABCDEFGHIJ')
 ]
 
 subprocess.call(['gcc', '../interpreter.c', '-std=c99', '-Wall', '-pedantic', '-o', 'pascalvm'])

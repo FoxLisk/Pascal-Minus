@@ -309,7 +309,6 @@ class Interpreter:
 
   def lt(self):
     self.s -= 1
-    print 'Is %d < %d' % (self.store[self.s], self.store[self.s + 1])
     self.set_store(self.s, 1 if self.store[self.s] < self.store[self.s + 1] else 0)
     self.p += 1
 
