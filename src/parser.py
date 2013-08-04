@@ -411,7 +411,7 @@ class Parser:
         tokens = Scanner(path).scan()
         break
     if tokens is None:
-      error('Unable to find `%s` in any libraries (checked %s)' % ('.'.join(import_path), ':'.join(self.import_path)))
+      error('Unable to find `%s` in any libraries (checked %s)' % ('.'.join(import_path), ':'.join(self.lib)))
     parser = self.create_sub_parser(tokens, path)
     code, success = parser.parse()
     if not success:

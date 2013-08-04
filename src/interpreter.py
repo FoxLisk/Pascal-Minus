@@ -200,7 +200,7 @@ class Interpreter:
     displ         is the displacement from p to the end of the proc call instruction (taking into account all the parameter lengths, etc)
     return_length is the length of the return type
     '''
-    self.s += return_length #push the stack so that it's pointing at the end of the space the var will be returned to
+    self.s += return_length + 1 #push the stack so that it's pointing at the end of the space the var will be returned to
     #trace static link back to the base
     log = 'Proc call: level %d displ %d ' % (level, displ)
     static_link = self.b

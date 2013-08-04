@@ -32,7 +32,9 @@ test_cases = [
   ('proc_vars', 'A'),
   ('nested_proc', 'A'),
   ('recursion', 'ABCDEFGHIJK'),
-  ('bitwise', '2\n1\n7\n4\n')
+  ('bitwise', '2\n1\n7\n4\n'),
+  ('lib/writeint_test', '12345'),
+  ('lib/abs_test', '11')
 ]
 
 subprocess.call(['gcc', '../interpreter.c', '-std=c99', '-Wall', '-pedantic', '-o', 'pascalvm'])
