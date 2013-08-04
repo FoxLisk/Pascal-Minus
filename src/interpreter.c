@@ -14,7 +14,6 @@ typedef int bool;
 #define OP_CONSTANT 4
 #define OP_DIVIDE 5
 #define OP_DO 6
-#define OP_ENDPROC 7
 #define OP_ENDPROG 8
 #define OP_EQUAL 9
 #define OP_FIELD 10
@@ -30,8 +29,6 @@ typedef int bool;
 #define OP_NOTGREATER 20
 #define OP_NOTLESS 21
 #define OP_OR 22
-#define OP_PROCCALL 23
-#define OP_PROCEDURE 24
 #define OP_PROGRAM 25
 #define OP_SUBTRACT 26
 #define OP_VALUE 27
@@ -47,6 +44,10 @@ typedef int bool;
 #define OP_BITOR 37
 #define OP_BITLSHIFT 38
 #define OP_BITRSHIFT 39
+#define OP_RETURN 40
+#define OP_FUNCTION 41
+#define OP_FUNCCALL 42
+#define OP_RETURNSPACE 44
 
 #define STACK_SIZE 1000000
 
@@ -268,13 +269,6 @@ void _do(int displ) {
   }
 } 
 
-void endproc(int param_length) {
-  p = stack[b + 2];
-  s = b;
-  s -= param_length + 1;
-  b = stack[b + 1];
-}
-
 void field(int displ) {
   stack[s] = stack[s] + displ;
   p += 2;
@@ -315,28 +309,8 @@ void _index(int lower, int upper, int length, int line_no) {
   p += 5;
 }
 
-void proccall(int level, int displ) {
-  s++;
-  int static_link = b;
-  while (level > 0) {
-    static_link = stack[static_link];
-    level--;
-  }
-  stack[s] = static_link;
-  stack[s + 1] = b;
-  stack[s + 2] = p + 3;
-  b = s;
-  s = b + 2;
-  p += displ;
-}
-
 void _program(int var_length, int displ) {
   s += var_length - 1;
-  p += displ;
-}
-
-void procedure(int var_length, int displ) {
-  s += var_length;
   p += displ;
 }
 
@@ -361,6 +335,48 @@ void varparam(int level, int displ) {
   int var_loc = stack[x + displ];
   stack[s] = var_loc;
   p += 3;
+}
+
+void _return(int param_length, int return_length) {
+  int return_address_last = b - (param_length + 1);
+  int l = return_length;
+  int _s = s;
+  while (l > 0) {
+    stack[return_address_last] = stack[_s];
+    return_address_last--;
+    l--;
+    _s--;
+  }
+  
+  p = stack[b + 2];
+  s = b;
+  s -= param_length + 1;
+  b = stack[b + 1];
+}
+
+void function(int var_length, int displ, int return_length) {
+  s += var_length + 1;
+  p += displ;
+}
+
+void func_call(int level, int displ, int return_length) {
+  s++;
+  int static_link = b;
+  while (level > 0) {
+    static_link = stack[static_link];
+    level--;
+  }
+  stack[s] = static_link;
+  stack[s + 1] = b;
+  stack[s + 2] = p + 4;
+  b = s;
+  s = b + 2;
+  p += displ;
+}
+
+void return_space(int displ) {
+  s += displ;
+  p += 2;
 }
 
 bool interpret(char* const file_name, bool debug) {
@@ -479,9 +495,6 @@ bool interpret(char* const file_name, bool debug) {
       case OP_DO:
         _do(program.opcodes[p+1]);
         break;
-      case OP_ENDPROC:
-        endproc(program.opcodes[p+1]);
-        break;
       case OP_FIELD:
         field(program.opcodes[p+1]);
         break;
@@ -497,12 +510,6 @@ bool interpret(char* const file_name, bool debug) {
       //end one-arg opts
       case OP_INDEX:
         _index(program.opcodes[p+1], program.opcodes[p+2], program.opcodes[p+3], program.opcodes[p+4]);
-        break;
-      case OP_PROCCALL:
-        proccall(program.opcodes[p+1], program.opcodes[p+2]);
-        break;
-      case OP_PROCEDURE:
-        procedure(program.opcodes[p+1], program.opcodes[p+2]);
         break;
       case OP_PROGRAM:
         _program(program.opcodes[p+1], program.opcodes[p+2]);
@@ -527,6 +534,18 @@ bool interpret(char* const file_name, bool debug) {
         break;
       case OP_BITRSHIFT:
         bit_rshift();
+        break;
+      case OP_RETURN:
+        _return(program.opcodes[p+1], program.opcodes[p+2]);
+        break;
+      case OP_FUNCTION:
+        function(program.opcodes[p+1],program.opcodes[p+2],program.opcodes[p+3]);
+        break;
+      case OP_FUNCCALL:
+        func_call(program.opcodes[p+1],program.opcodes[p+2],program.opcodes[p+3]);
+        break;
+      case OP_RETURNSPACE:
+        return_space(program.opcodes[p+1]);
         break;
       default:
         running = false;
