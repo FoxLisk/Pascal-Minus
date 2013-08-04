@@ -170,7 +170,10 @@ class Interpreter:
     self.p += displ
 
   def return_space(self, displ):
-    self.s += displ #we need enough space at top of stack to accomodate the return value
+    for i in range(displ):
+      self.s += 1
+      self.store[self.s] = 'return space'
+    #self.s += displ #we need enough space at top of stack to accomodate the return value
     self.p += 2
 
   def _return(self, param_length, return_length):
@@ -200,7 +203,8 @@ class Interpreter:
     displ         is the displacement from p to the end of the proc call instruction (taking into account all the parameter lengths, etc)
     return_length is the length of the return type
     '''
-    self.s += return_length + 1 #push the stack so that it's pointing at the end of the space the var will be returned to
+    #self.s += return_length + 1 #push the stack so that it's pointing at the end of the space the var will be returned to
+    self.s += 1 #push the stack so that it's pointing at the end of the space the var will be returned to
     #trace static link back to the base
     log = 'Proc call: level %d displ %d ' % (level, displ)
     static_link = self.b
@@ -216,15 +220,18 @@ class Interpreter:
     self.s = self.b + 2
     self.p += displ
 
+  def function(self, var_length, displ, return_length):
+    for i in range(var_length):
+      self.s += 1
+      self.store[self.s] = 'var space'
+    self.s += 1 #currently pointing at the return value location; we want to move 1 forward and then past the vars
+    #self.s += var_length #move top of stack past the variable part
+    self.p += displ #move the program pointer past displ (the number of instructions to invoke the proedure)
+
   def procedure(self, var_length, displ):
     '''
     DEPRECATED: use function
     '''
-    self.s += var_length #move top of stack past the variable part
-    self.p += displ #move the program pointer past displ (the number of instructions to invoke the proedure)
-
-  def function(self, var_length, displ, return_length):
-    self.s += 1 #currently pointing at the return value location; we want to move 1 forward and then past the vars
     self.s += var_length #move top of stack past the variable part
     self.p += displ #move the program pointer past displ (the number of instructions to invoke the proedure)
 
@@ -253,6 +260,7 @@ class Interpreter:
 
   def write(self):
     val = self.store[self.s]
+    print 'Writing %d'  % val
     self.out.write(chr(val))
     self.s -= 1
     self.p += 1
@@ -302,6 +310,7 @@ class Interpreter:
 
   def lt(self):
     self.s -= 1
+    print 'Is %d < %d' % (self.store[self.s], self.store[self.s + 1])
     self.set_store(self.s, 1 if self.store[self.s] < self.store[self.s + 1] else 0)
     self.p += 1
 

@@ -463,15 +463,18 @@ class Parser:
       self.expect(')')
     self.expect(':')
 
-    self.parameter_addressing(params)
-    for param in params:
-      self.scope.add_param(param)
-    
     return_type_name = self.name()
     return_type = self.scope.get_type(return_type_name);
 
     func = self.scope.add_proc(func_name, params, self.block_level, self.labeler.new_label(), return_type)
     self.current_proc.append(func)
+    #print 'vars before pushing scope: ' + str(scope.vars)
+    self.push_scope()
+
+    self.parameter_addressing(params)
+    for param in params:
+      self.scope.add_param(param)
+    
     self.expect(';')
 
     var_length_label = self.labeler.new_label()
@@ -488,6 +491,7 @@ class Parser:
     self.emit_code(Op.RETURN, param_length, return_type.length())
     #TODO this will just leave junk values if user doesn't RETURN explicitly...
     self.current_proc.pop()
+    self.pop_scope()
 
   def procedure_definition(self):
     self.expect('procedure')
