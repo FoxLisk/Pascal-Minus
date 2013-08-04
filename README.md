@@ -57,8 +57,9 @@ The interpreter is a bytecode interpreter, using a vaguely-documented bytecode. 
 
 Perhaps the most difficult part of the interpreter to understand is the handling of stack frames. When a procedure is called, two things happen:
 
-1. Any actual parameters are pushed onto the stack. This is why parameter access instructions have negative displacements.
-2. A new stack frame is set up on top of the stack, pushing the top 3 values of the stack to be the "static link," "dynamic link," and "return address." The static link is the link to the previous lexical (static) scope. The dynamic link is the link to the previous runtime (dynamic) scope. The return address is the next instruction after the procedure call instruction in the program code. 
+1. Enough empty space for the return value (if any) of the function is pushed onto the stack.
+2. Any actual parameters are pushed onto the stack. This is why parameter access instructions have negative displacements.
+3. A new stack frame is set up on top of the stack, pushing the top 3 values of the stack to be the "static link," "dynamic link," and "return address." The static link is the link to the previous lexical (static) scope. The dynamic link is the link to the previous runtime (dynamic) scope. The return address is the next instruction after the procedure call instruction in the program code. 
 
 Other than this, which execution model I was unable to make very clear in the code itself, the stack behaviour is very straightforward.
 
