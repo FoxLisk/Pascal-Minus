@@ -260,7 +260,6 @@ class Interpreter:
 
   def write(self):
     val = self.store[self.s]
-    print 'Writing %d'  % val
     self.out.write(chr(val))
     self.s -= 1
     self.p += 1
