@@ -715,10 +715,11 @@ class Parser:
         error('Parameter %d passed to `%s` is of type `%s`; expecting `%s`' % (i + 1, proc_name, params[i], proc.params[i].type), self.line_no)
     if proc.name == 'Write':
       self.emit_code(Op.WRITE)
-      return None #TODO probably want a real void type
+      return self.scope.get_type('void')
     elif proc.name == 'Read':
-      error('Read not implemented', self.line_no)
-      return None #TODO probably want a real void type
+      self.emit_code(Op.READ)
+      #error('Read not implemented', self.line_no)
+      return self.scope.get_type('void')
     else:
       self.emit_code(Op.FUNCCALL, self.block_level - proc.level, proc.label, proc.return_length())
       return proc.return_type #TODO probably want a real void type

@@ -6,7 +6,7 @@ import sys
 
 
 class Interpreter:
-  def __init__(self, out, filename = None, code = None, stack_size = 1000000):
+  def __init__(self, out, instream, filename = None, code = None, stack_size = 1000000):
     if (filename is None) == (code is None):
       raise Exception("Must pass in a filename XOR a list of bytecodes")
     if filename is not None:
@@ -17,6 +17,7 @@ class Interpreter:
     self.b = 0
     self.s = 4
     self.out = out
+    self.instream = instream
 
     self.stack_size = stack_size
     self.store = [-99999] * stack_size
@@ -270,8 +271,8 @@ class Interpreter:
         
   def read(self):
     #address of the variable is the top of the stack
-    var_addr = self.store[s]
-    self.set_store(var_addr, int(raw_input()))
+    var_addr = self.store[self.s]
+    self.set_store(var_addr, int(self.instream.readline().strip()))
     self.s -= 1
     self.p += 1
 
@@ -449,5 +450,5 @@ class Interpreter:
 if __name__ == '__main__':
   debug_mode = '-d' in sys.argv or '--debug' in sys.argv
   set_debug(debug_mode)
-  interp = Interpreter(sys.stdout, filename = sys.argv[1])
+  interp = Interpreter(sys.stdout, sys.stdin, filename = sys.argv[1])
   interp.interpret(debug_mode = debug_mode)

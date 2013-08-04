@@ -12,7 +12,7 @@ def write(codes, filename):
     f.write(str(c) + " ")
   f.close()
 
-def compile_pascal(source, dest, is_debug = False, is_interpret = False, out_stream = sys.stdout, output_tokens = False, output_bytecodes = False, lib = ['.']):
+def compile_pascal(source, dest, is_debug = False, is_interpret = False, out_stream = sys.stdout, output_tokens = False, output_bytecodes = False, lib = ['.'], in_stream = sys.stdin):
   '''
   DID YOU KNOW that compile() is a built in function?
   '''
@@ -41,7 +41,7 @@ def compile_pascal(source, dest, is_debug = False, is_interpret = False, out_str
   write(assembled, dest)
   debug('assembly complete.' )
   if is_interpret:
-    interp = Interpreter(out_stream, code = assembled)
+    interp = Interpreter(out_stream, in_stream, code = assembled)
     interp.interpret()
   else:
     debug('run program now with `python interpreter.py %s`' % dest)
