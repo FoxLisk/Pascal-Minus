@@ -176,6 +176,7 @@ class Interpreter:
   def _return(self, param_length, return_length):
     #first copy return_length blocks from top of stack to the return address
     #do this in reverse order for convenience
+
     return_address_last = self.b - (param_length + 1)
     l = return_length
     s = self.s
@@ -209,7 +210,7 @@ class Interpreter:
       level -= 1
     self.set_store(self.s, static_link)
     self.set_store(self.s + 1, self.b) #store the current base address as the new dynamic link
-    self.set_store(self.s + 2, self.p + 3) #current program instruction + 3 as new return address (3 because the proc call instr, level, displ and its the one AFTER those.)
+    self.set_store(self.s + 2, self.p + 4) #current program instruction + 3 as new return address (3 because the proc call instr, level, displ and its the one AFTER those.)
     #debug(log)
     self.b = self.s
     self.s = self.b + 2
@@ -393,8 +394,7 @@ class Interpreter:
         debug('-- %s' % op)
 
       if debug_mode:
-        debug('STACK: ' + str(code[:self.s]))
-        stack = copy(code[:self.s])
+        debug('STACK: ' + str(self.store[:self.s + 1]))
 
       if op in no_arg:
         no_arg[op]()
