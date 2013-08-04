@@ -520,7 +520,7 @@ class Parser:
 
     param_length = sum(map(lambda p: 1 if p.is_var_param else p.length(), params))
 
-    self.emit_code(Op.ENDFUNC, param_length, 0)
+    self.emit_code(Op.RETURN, param_length, 0)
     self.pop_scope()
 
   def formal_parameter_list(self):

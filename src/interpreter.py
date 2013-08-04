@@ -224,6 +224,7 @@ class Interpreter:
     self.p += displ #move the program pointer past displ (the number of instructions to invoke the proedure)
 
   def function(self, var_length, displ, return_length):
+    self.s += 1 #currently pointing at the return value location; we want to move 1 forward and then past the vars
     self.s += var_length #move top of stack past the variable part
     self.p += displ #move the program pointer past displ (the number of instructions to invoke the proedure)
 
