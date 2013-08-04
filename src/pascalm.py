@@ -12,7 +12,7 @@ def write(codes, filename):
     f.write(str(c) + " ")
   f.close()
 
-def compile_pascal(source, dest, is_debug = False, is_interpret = False, out_stream = sys.stdout, output_tokens = False, output_bytecodes = False):
+def compile_pascal(source, dest, is_debug = False, is_interpret = False, out_stream = sys.stdout, output_tokens = False, output_bytecodes = False, lib = ['.']):
   '''
   DID YOU KNOW that compile() is a built in function?
   '''
@@ -23,13 +23,16 @@ def compile_pascal(source, dest, is_debug = False, is_interpret = False, out_str
   if output_tokens:
     write(tokens, source + "_tokenized")
   debug('scanning complete')
-  parser = Parser(tokens)
-  bytecodes = parser.parse()
+  parser = Parser(tokens, source, lib = lib)
+  bytecodes, success = parser.parse()
   if output_bytecodes:
     if is_debug:
       write(prettify(bytecodes), source + "_unassembled")
     else:
       write(bytecodes, source + "_unassembled")
+  if not success:
+    print 'Parsing error'
+    return
   debug('parsing complete')
   assembler = Assembler(bytecodes)
   assembled = assembler.assemble()
@@ -50,12 +53,19 @@ def main():
   output_tokens = '-t' in sys.argv or '--tokens' in sys.argv
   output_bytecodes = '-b' in sys.argv or '--bytecodes' in sys.argv
   dest = source + 'c'
+  lib = ['.']
+  if '--lib' in sys.argv:
+    i = sys.argv.index('--lib') + 1
+    if i >= sys.argv:
+      print '--lib must be followed by a colon-separated list of library locations to look in'
+    lib.extend(sys.argv[i].split(':'))
+
   if '-o' in sys.argv:
     i = sys.argv.index('-o') + 1
     if i < len(sys.argv):
       dest = sys.argv[i]
 
-  compile_pascal(source, dest, is_debug, interpret, sys.stdout, output_tokens, output_bytecodes)
+  compile_pascal(source, dest, is_debug, interpret, sys.stdout, output_tokens, output_bytecodes, lib)
 
 if __name__ == '__main__':
   main()

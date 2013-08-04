@@ -1,5 +1,5 @@
 from copy import copy
-from administration_functions import get_code, debug, set_debug, debug_mode
+from administration_functions import get_code, debug, set_debug
 from bytecodes import Op, reverse_bytecodes, bytecodes
 from collections import defaultdict
 import sys
@@ -23,7 +23,7 @@ class Interpreter:
 
   def error(self, msg):
     print 'FATAL ERROR: STACK'
-    print self.store
+    print self.store[0:self.s + 1]
     raise Exception(msg)
 
   def set_store(self, loc, val):
@@ -42,8 +42,6 @@ class Interpreter:
     #This check should really be left in for safety but assuming the interpreter is bug-free (hah hah hah)
     #it's actually safe to leave it out
     #saves about half a second per 7 million calls (non-trivial actually)
-    #if loc < self.code_length:
-      #self.error('Trying to overwrite program instructions')
     #print 'setting store[%d] to %d' % (loc, val)
     self.store[loc] = val
 
@@ -153,6 +151,7 @@ class Interpreter:
     '''
     level is the number of levels back in the static link to follow
     displ is the displacement from p to the end of the proc call instruction (taking into account all the parameter lengths, etc)
+    DEPRECATED: should only use func_call
     '''
     self.s += 1
     #trace static link back to the base
@@ -170,19 +169,83 @@ class Interpreter:
     self.s = self.b + 2
     self.p += displ
 
+  def return_space(self, displ):
+    for i in range(displ):
+      self.s += 1
+      self.store[self.s] = 'return space'
+    #self.s += displ #we need enough space at top of stack to accomodate the return value
+    self.p += 2
+
+  def _return(self, param_length, return_length):
+    #first copy return_length blocks from top of stack to the return address
+    #do this in reverse order for convenience
+
+    return_address_last = self.b - (param_length + 1)
+    l = return_length
+    s = self.s
+    while l > 0:
+      self.store[return_address_last] = self.store[s]
+      return_address_last -= 1
+      l -= 1
+      s -= 1
+   
+    #then just go back to the return address as usual
+    self.p = self.store[self.b + 2] #move p to the value stored in b + 2, which is the return address
+    self.s = self.b #move the stack pointer back to b: b, when a proc call starts, points
+                    #to the new activation record (which is the top of the stack), so b
+                    #holds the top of the stack [after params were pushed] before the proc call
+    self.s -= param_length + 1 #move the stack pointer back past all the params
+    self.b = self.store[self.b + 1]
+
+  def func_call(self, level, displ, return_length):
+    '''
+    level         is the number of levels back in the static link to follow
+    displ         is the displacement from p to the end of the proc call instruction (taking into account all the parameter lengths, etc)
+    return_length is the length of the return type
+    '''
+    #self.s += return_length + 1 #push the stack so that it's pointing at the end of the space the var will be returned to
+    self.s += 1 #push the stack so that it's pointing at the end of the space the var will be returned to
+    #trace static link back to the base
+    log = 'Proc call: level %d displ %d ' % (level, displ)
+    static_link = self.b
+    log += 'static link now %d ' % self.b
+    while level > 0:
+      static_link = self.store[static_link]
+      level -= 1
+    self.set_store(self.s, static_link)
+    self.set_store(self.s + 1, self.b) #store the current base address as the new dynamic link
+    self.set_store(self.s + 2, self.p + 4) #current program instruction + 3 as new return address (3 because the proc call instr, level, displ and its the one AFTER those.)
+    #debug(log)
+    self.b = self.s
+    self.s = self.b + 2
+    self.p += displ
+
+  def function(self, var_length, displ, return_length):
+    for i in range(var_length):
+      self.s += 1
+      self.store[self.s] = 'var space'
+    self.s += 1 #currently pointing at the return value location; we want to move 1 forward and then past the vars
+    #self.s += var_length #move top of stack past the variable part
+    self.p += displ #move the program pointer past displ (the number of instructions to invoke the proedure)
+
   def procedure(self, var_length, displ):
-    #self.s += var_length - 1 #move top of stack past the variable part
-    self.s += var_length
+    '''
+    DEPRECATED: use function
+    '''
+    self.s += var_length #move top of stack past the variable part
     self.p += displ #move the program pointer past displ (the number of instructions to invoke the proedure)
 
   def end_proc(self, param_length):
+    '''
+    DEPRECATED: only return now
+    '''
     log = 'ending proc call, returning to instruction %d ' % self.store[self.b + 2]
     if self.s - param_length != self.b + 2:
       #TODO this check should occur once im sure how to get it right
       #self.error('At end of procedure call stack should be empty')
       pass
     self.p = self.store[self.b + 2] #move p to the value stored in b + 2, which is the return address
-    self.s = self.b #move the stack pointer back to b - b, when a proc call starts, points
+    self.s = self.b #move the stack pointer back to b: b, when a proc call starts, points
                     #to the new activation record (which is the top of the stack), so b
                     #holds the top of the stack [after params were pushed] before the proc call
     self.s -= param_length + 1 #move the stack pointer back past all the params
@@ -266,6 +329,18 @@ class Interpreter:
   def ne(self):
     self.binary_op(lambda x, y: 1 if x != y else 0)
 
+  def bitwise_and(self):
+    self.binary_op(lambda x, y: x & y)
+
+  def bitwise_or(self):
+    self.binary_op(lambda x, y: x | y)
+
+  def bitwise_lshift(self):
+    self.binary_op(lambda x, y: x << y)
+
+  def bitwise_rshift(self):
+    self.binary_op(lambda x, y: x >> y)
+
   ######
   # UNARY OPERATIONS
   ######
@@ -281,7 +356,7 @@ class Interpreter:
   def minus(self):
     self.unary_op(lambda x: -x)
 
-  def interpret(self):
+  def interpret(self, debug_mode = False):
     no_arg = {
       Op.ADD: self.add,
       Op.AND: self.log_and,
@@ -300,7 +375,11 @@ class Interpreter:
       Op.SHORTVALUE: self.short_value,
       Op.SUBTRACT: self.subtract,
       Op.READ: self.read,
-      Op.WRITE: self.write
+      Op.WRITE: self.write,
+      Op.BITAND: self.bitwise_and,
+      Op.BITOR: self.bitwise_or,
+      Op.BITLSHIFT: self.bitwise_lshift,
+      Op.BITRSHIFT: self.bitwise_rshift
     }
 
     one_arg = {
@@ -317,19 +396,14 @@ class Interpreter:
     code = self.code
     while True:
       op = code[self.p]
-      '''
       try:
         debug('-- %s' % reverse_bytecodes[op])
       except KeyError:
-        debug('handling %s' % op)
+        debug('-- %s' % op)
 
       if debug_mode:
-        stack = copy(code[self.code_length:])
-        disp_ptr = self.s - self.code_length
-        if 0 <= disp_ptr < len(stack):
-          stack[disp_ptr] = '*%d*' % stack[disp_ptr]
-        debug('STACK: ' + str(stack))
-      '''
+        debug('STACK: ' + str(self.store[:self.s + 1]))
+
       if op in no_arg:
         no_arg[op]()
       elif op in one_arg:
@@ -354,10 +428,22 @@ class Interpreter:
       elif op == Op.VARPARAM:
         p = self.p
         self.var_param(code[p + 1], code[p + 2])
+      elif op == Op.FUNCTION:
+        p = self.p
+        self.function(code[p + 1], code[p + 2], code[p + 3])
+      elif op == Op.FUNCCALL:
+        p = self.p
+        self.func_call(code[p + 1], code[p + 2], code[p + 3])
+      elif op == Op.RETURNSPACE:
+        self.return_space(code[self.p + 1])
+      elif op == Op.RETURN:
+        p = self.p
+        self._return(code[p + 1], code[p + 2])
       else:
         self.error('Unexpected opcode %d' % op)
 
 if __name__ == '__main__':
-  set_debug('-d' in sys.argv or '--debug' in sys.argv)
+  debug_mode = '-d' in sys.argv or '--debug' in sys.argv
+  set_debug(debug_mode)
   interp = Interpreter(sys.stdout, filename = sys.argv[1])
-  interp.interpret()
+  interp.interpret(debug_mode = debug_mode)

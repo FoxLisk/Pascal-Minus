@@ -22,7 +22,6 @@ typedef int bool;
 #define OP_GREATER 12
 #define OP_INDEX 13
 #define OP_LESS 14
-#define OP_LOCALVAR 34
 #define OP_MINUS 15
 #define OP_MODULO 16
 #define OP_MULTIPLY 17
@@ -36,13 +35,18 @@ typedef int bool;
 #define OP_PROGRAM 25
 #define OP_SUBTRACT 26
 #define OP_VALUE 27
-#define OP_SHORTVALUE 35
 #define OP_VARIABLE 28
 #define OP_VARPARAM 29
 #define OP_READ 30
 #define OP_WRITE 31
 #define OP_DEFADDR 32
 #define OP_DEFARG 33
+#define OP_LOCALVAR 34
+#define OP_SHORTVALUE 35
+#define OP_BITAND 36
+#define OP_BITOR 37
+#define OP_BITLSHIFT 38
+#define OP_BITRSHIFT 39
 
 #define STACK_SIZE 1000000
 
@@ -63,6 +67,10 @@ bool get_code(char* const file_name) {
   int code_length = 0;
 
   FILE *fp = fopen(file_name, "r");
+  if (fp == NULL) {
+    printf("Could not open file %s for reading", file_name);
+    return false;
+  }
   while (true) {
     if (code_length == code_size) {
       int new_size = code_size * 2;
@@ -150,6 +158,27 @@ void modulo() {
 void multiply() {
   s--;
   stack[s] = stack[s] * stack[s + 1];
+  p++;
+}
+
+void bit_and() {
+  s--;
+  stack[s] = stack[s] & stack[s + 1];
+  p++;
+}
+void bit_or() {
+  s--;
+  stack[s] = stack[s] | stack[s + 1];
+  p++;
+}
+void bit_lshift() {
+  s--;
+  stack[s] = stack[s] << stack[s + 1];
+  p++;
+}
+void bit_rshift() {
+  s--;
+  stack[s] = stack[s] >> stack[s + 1];
   p++;
 }
 
@@ -487,6 +516,25 @@ bool interpret(char* const file_name, bool debug) {
       case OP_ENDPROG:
         running = false;
         break;
+      case OP_BITAND:
+        bit_and();
+        break;
+      case OP_BITOR:
+        bit_or();
+        break;
+      case OP_BITLSHIFT:
+        bit_lshift();
+        break;
+      case OP_BITRSHIFT:
+        bit_rshift();
+        break;
+      default:
+        running = false;
+        char errmsg[20]; 
+        sprintf(errmsg, "Unknown opcode %d", op);
+        error(errmsg);
+        break;
+
     }
 
     if (debug) {
@@ -502,6 +550,13 @@ bool interpret(char* const file_name, bool debug) {
 }
 
 int main(int argc, char* argv[]) {
+  if (argc < 2) {
+    printf("Error: must provide filename as first argument");
+    exit(1);
+  }
+
+  char* file_name = argv[1];
+
   bool debug;
   for (int i = 0; i < argc; i++) {
     if (strcmp(argv[i], "-d") == 0 || strcmp(argv[i], "--debug") == 0) {
@@ -509,8 +564,9 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  char* file_name = argv[1];
   if (!interpret(file_name, debug)) {
     printf("Error interpreting `%s`", file_name);
   }
+
+  return 0;
 }
