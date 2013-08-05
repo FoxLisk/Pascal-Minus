@@ -230,7 +230,10 @@ void subtract() {
 }
 
 void read() {
-  printf("Error: read not implemented, undefined behaviour\n");
+  int var_addr = stack[s];
+  int read_val;
+  scanf("%d", &read_val);
+  stack[var_addr] = read_val;
   s--;
   //stack[s] = stack[s] + stack[s + 1];
   p++;
