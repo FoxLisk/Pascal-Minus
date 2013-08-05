@@ -24,10 +24,11 @@ class CheatingInStream:
     return '%s\n' % self.val
 
 class TestCase:
-  def __init__(self, filename, expected, in_stream = sys.stdin):
+  def __init__(self, filename, expected, in_stream = sys.stdin, skip_c = False):
     self.filename = filename
     self.expected = expected
     self.in_stream = in_stream
+    self.skip_c = skip_c
 
 out_stream = CheatingStream()
 
@@ -51,7 +52,7 @@ test_cases = [
   TestCase('lib/abs_test', '11'),
   TestCase('long_return', 'ABCDEFGHIJ'),
   TestCase('early_return', 'A'), 
-  TestCase('readtest', '\nA', CheatingInStream('65'))
+  TestCase('readtest', '\nA', CheatingInStream('65'), True)
 ]
 
 subprocess.call(['gcc', '../interpreter.c', '-std=c99', '-Wall', '-pedantic', '-o', 'pascalvm'])
@@ -69,9 +70,10 @@ for case in test_cases:
     if out_stream.val() != case.expected:
       errors.append("Test case %s failed: Expected `%s`, found `%s`" % (case.filename, case.expected, out_stream.val()))
 
-    output = subprocess.check_output(['./pascalvm', 'dest']);
-    if output != case.expected:
-      c_errors.append("Test case %s failed: Expected `%s`, found `%s`" % (case.filename, case.expected, output))
+    if not case.skip_c:
+      output = subprocess.check_output(['./pascalvm', 'dest']);
+      if output != case.expected:
+        c_errors.append("Test case %s failed: Expected `%s`, found `%s`" % (case.filename, case.expected, output))
   except:
     errors.append('Caught exception in test case %s:\n  %s' % (case.filename, traceback.format_exc()))
   out_stream.reset()
