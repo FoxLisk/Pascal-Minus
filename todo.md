@@ -8,3 +8,4 @@
 * I dont know C so probably that could be cleaned up a bit
 * there should at least _maybe_ be dynamic allocation (esp. if we intend to make strings the least bit usable)
 * functions with different signatures should be allowed
+  update: this is gonna be *hard* - will require not outputting the actual parameters when we run through the actual parameter list, since we have to look at every parameter to determine what functon is being called. we can't even go through and put off the decision until the end because of varparams
