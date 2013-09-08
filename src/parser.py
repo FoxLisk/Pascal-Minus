@@ -296,7 +296,6 @@ class Parser:
     sub_parser.scope = self.scope.get_copy_for_import() #we want to add any new functions to our existing scope
     return sub_parser
 
-
   def push_scope(self):
     #print 'push_scope'
     self.scope = Scope(self.scope)
@@ -328,8 +327,8 @@ class Parser:
     is_int = False
     for s in all_symbols:
       if is_nl:
-        self.line_no = int(s)
         is_nl = False
+        yield s
         continue
       if is_name:
         is_name = False
@@ -342,6 +341,7 @@ class Parser:
       symbol_type = reverse_symbols[s]
       if symbol_type == '\n':
         is_nl = True
+        yield s
         continue
       if symbol_type == 'numeral':
         is_int = True
@@ -367,11 +367,8 @@ class Parser:
     try:
       symbol = self.__next_symbol()
       while symbol == '\n':
-        line_no = self.__next_symbol()
-        self.line_no = int(line_no)
-        self.symbol_rec.extend('\n', line_no)
-        self.symbol_idx += 2
-        symbol = __next_symbol()
+        self.line_no = int(self.__next_symbol())
+        symbol = self.__next_symbol()
       self.current_symbol = symbol
       return self.current_symbol
     except StopIteration:
