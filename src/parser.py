@@ -200,8 +200,13 @@ class Scope:
     if name in self.types:
       return self.types[name]
 
-  def get_func(self, name):
-    return self.get('proc', name)
+  def get_func(self, name, params):
+    procs = self.get('proc', name)
+    for proc in procs:
+      if len(proc.params) != len(params):
+        continue
+      if all(map(lambda x: x[0].type == x[1], zip(proc.params, params))):
+        return proc
 
   def get(self, t, name):
     '''
@@ -235,8 +240,11 @@ class Scope:
     return f is not None
 
   def is_func(self, name):
-    f = self.get_func(name)
-    return f is not None
+    if name in self.procs:
+      return True
+    if self.parent is None:
+      return False
+    return self.parent.is_func(name)
 
   def add_type(self, name, type):
     if name in self.types:
@@ -258,9 +266,27 @@ class Scope:
 
   def add_proc(self, name, params, level, label, return_type = None):
     if name in self.procs:
-      error('Cannot redefine procedure %s' % name)
+      procs = self.procs[name]
+
+      is_match = False
+      #check if any already defined procedure matches the parameter types
+      for proc in procs:
+        if len(proc.params) != len(params):
+          continue
+        is_match = True
+        for i in range(len(params)):
+          if proc.params[i].type != params[i].type:
+            is_match = False
+            break
+        if is_match:
+          break
+
+      if is_match:
+        error('Cannot redefine procedure %s' % name)
+    else:
+      self.procs[name] = []
     proc = Proc(name, params, level, label, return_type)
-    self.procs[name] = proc
+    self.procs[name].append(proc)
     return proc
 
   def add_param(self, param):
@@ -728,24 +754,43 @@ class Parser:
     else:
       error('Expected selector', self.line_no)
 
+
+  def get_func(self, proc_name):
+    params = []
+    self.emitting = False
+    mark = self.set_mark()
+
+    if self.check('('):
+      self.expect('(')
+      params.append(self.actual_parameter())
+      while self.check(','):
+        self.expect(',')
+        params.append(self.actual_parameter())
+      self.expect(')')
+
+    self.emitting = True
+    self.jump_to_mark(mark)
+
+    proc = self.scope.get_func(proc_name, params)
+
+    if proc is None:
+      error('No function with name `%s` and parameter types `%s`' % proc_name, ','.join(params), self.line_no)
+
+    return proc
+
   def procedure_statement(self, proc_name):
     #print 'procedure_statement'
     #name has already been consumed in figuring out whether we're in
     #assignment or procedure statement
-    proc = self.scope.get_func(proc_name)
-    if proc is None:
-      error('trying to call nonexistent procedure %s' % proc_name, self.line_no)
-    params = []
+    proc = self.get_func(proc_name)
+
     self.emit_code(Op.RETURNSPACE, proc.return_length())
+
     if self.check('('):
       self.expect('(')
       params = self.actual_parameter_list(proc)
       self.expect(')')
-    if len(params) != len(proc.params):
-      error('`%s` takes %d parameters; %d given' % (proc_name, len(proc.params), len(params)), self.line_no)
-    for i in range(len(params)):
-      if params[i] != proc.params[i].type: 
-        error('Parameter %d passed to `%s` is of type `%s`; expecting `%s`' % (i + 1, proc_name, params[i], proc.params[i].type), self.line_no)
+
     if proc.name == 'Write':
       self.emit_code(Op.WRITE)
       return self.scope.get_type('void')
