@@ -284,6 +284,8 @@ class Parser:
     self.line_no = 0
     self.imported = set()
     self.current_proc = []
+    self.symbol_idx = 0
+    self.symbol_rec = []
 
   def create_sub_parser(self, tokens, filename):
     sub_parser = Parser(tokens, filename)
@@ -351,10 +353,26 @@ class Parser:
         is_name = False
       yield s
 
+  def __next_symbol(self): #god these need better names!
+    self.symbol_idx += 1
+    if self.symbol_idx < len(self.symbol_rec):
+      symbol = self.symbol_rec[self.symbol_idx]
+    else:
+      symbol =  self.symbols.next()
+      self.symbol_rec.append(symbol)
+    return symbol
+
   def next_symbol(self):
     #print 'next_symbol'
     try:
-      self.current_symbol = self.symbols.next()
+      symbol = self.__next_symbol()
+      while symbol == '\n':
+        line_no = self.__next_symbol()
+        self.line_no = int(line_no)
+        self.symbol_rec.extend('\n', line_no)
+        self.symbol_idx += 2
+        symbol = __next_symbol()
+      self.current_symbol = symbol
       return self.current_symbol
     except StopIteration:
       error('out of symbols', self.line_no)
