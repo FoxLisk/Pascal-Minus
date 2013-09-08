@@ -7,6 +7,7 @@ from scanner import Scanner
 from copy import copy
 import os
 import traceback
+import pdb
 
 class Labeler:
   def __init__(self):
@@ -270,6 +271,12 @@ class Scope:
       error('Cannot redefine variable %s' % name)
     self.vars[param.name] = param
 
+class Mark:
+  def __init__(self, idx, symbol, line_no):
+    self.idx = idx
+    self.line_no = line_no
+    self.symbol = symbol
+
 class Parser:
   def __init__(self, symbol_list, filename, lib = ['.']):
     self.filename = filename
@@ -286,6 +293,7 @@ class Parser:
     self.current_proc = []
     self.symbol_idx = 0
     self.symbol_rec = []
+    self.emitting = True
 
   def create_sub_parser(self, tokens, filename):
     sub_parser = Parser(tokens, filename)
@@ -311,8 +319,9 @@ class Parser:
   def emit_code(self, *args):
     if len(args) <> code_lengths[args[0]]:
       error('Error: wrong length of opcodes for instr %s' % reverse_bytecodes[args[0]])
-    for arg in args:
-      self.bytecodes.append(arg)
+    if self.emitting:
+      for arg in args:
+        self.bytecodes.append(arg)
 
   def _next_symbol(self, all_symbols):
     #print '_next_symbol'
@@ -354,12 +363,12 @@ class Parser:
       yield s
 
   def __next_symbol(self): #god these need better names!
-    self.symbol_idx += 1
     if self.symbol_idx < len(self.symbol_rec):
       symbol = self.symbol_rec[self.symbol_idx]
     else:
       symbol =  self.symbols.next()
       self.symbol_rec.append(symbol)
+    self.symbol_idx += 1
     return symbol
 
   def next_symbol(self):
@@ -378,9 +387,9 @@ class Parser:
     code = symbols[symbol]
     if self.current_symbol != code:
       if self.current_symbol in reverse_symbols:
-        error("Expected %s, found %s" % (symbol, reverse_symbols[self.current_symbol]), self.line_no)
+        error("Expected `%s`, found `%s`" % (symbol, reverse_symbols[self.current_symbol]), self.line_no)
       else:
-        error("Expected %s, found unknown symbol %d" % (symbol, self.current_symbol), self.line_no)
+        error("Expected `%s`, found unknown symbol `%s`" % (symbol, str(self.current_symbol)), self.line_no)
     else:
       self.next_symbol()
 
@@ -446,10 +455,18 @@ class Parser:
     if not self.is_import:
       self.emit_code(Op.ENDPROG)
 
+  def set_mark(self):
+    return Mark(self.symbol_idx, self.current_symbol, self.line_no)
+
+  def jump_to_mark(self, mark):
+    self.symbol_idx = mark.idx
+    self.current_symbol = mark.symbol
+    self.line_no = mark.line_no
+
   def block_body(self, var_label, begin_label):
     #print 'block_body'
+
     if self.current_symbol in first('ConstantDefinitionPart'):
-      #print "trying constant definition part"
       self.constant_definition_part()
     if self.current_symbol in first('TypeDefinitionPart'):
       self.type_definition_part()
@@ -457,6 +474,7 @@ class Parser:
       vars = self.variable_definition_part()
     else:
       vars = []
+
     while self.current_symbol in first('ProcedureDefinition') \
         or self.current_symbol in first('FunctionDefinition'):
           if self.current_symbol in first('ProcedureDefinition'):
@@ -835,9 +853,11 @@ class Parser:
     #print 'constant_definition'
     const_name = self.name()
     self.expect('=')
+
     type, val = self.constant()
-    self.expect(';')
     self.scope.add_const(const_name, type, val)
+
+    self.expect(';')
 
   def type_definition_part(self):
     #print 'type_definition_part'
