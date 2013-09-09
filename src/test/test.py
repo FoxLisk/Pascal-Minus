@@ -52,7 +52,8 @@ test_cases = [
   TestCase('lib/abs_test', '11'),
   TestCase('long_return', 'ABCDEFGHIJ'),
   TestCase('early_return', 'A'), 
-  TestCase('readtest', '\nA', CheatingInStream('65'), True)
+  TestCase('readtest', '\nA', CheatingInStream('65'), True),
+  TestCase('test_poly', 'ABC')
 ]
 
 subprocess.call(['gcc', '../interpreter.c', '-std=c99', '-Wall', '-pedantic', '-o', 'pascalvm'])
