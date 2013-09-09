@@ -200,13 +200,23 @@ class Scope:
     if name in self.types:
       return self.types[name]
 
-  def get_func(self, name, params):
-    procs = self.get('proc', name)
+  def _get_local_func(self, name, params):
+    procs = self.procs.get(name, [])
     for proc in procs:
       if len(proc.params) != len(params):
         continue
       if all(map(lambda x: x[0].type == x[1], zip(proc.params, params))):
         return proc
+    return None
+
+
+  def get_func(self, name, params):
+    proc = self._get_local_func(name, params)
+    if proc is not None:
+      return proc
+    if self.parent is None:
+      return None
+    return self.parent.get_func(name, params)
 
   def get(self, t, name):
     '''
@@ -265,26 +275,12 @@ class Scope:
     return var
 
   def add_proc(self, name, params, level, label, return_type = None):
-    if name in self.procs:
-      procs = self.procs[name]
-
-      is_match = False
-      #check if any already defined procedure matches the parameter types
-      for proc in procs:
-        if len(proc.params) != len(params):
-          continue
-        is_match = True
-        for i in range(len(params)):
-          if proc.params[i].type != params[i].type:
-            is_match = False
-            break
-        if is_match:
-          break
-
-      if is_match:
-        error('Cannot redefine procedure %s' % name)
-    else:
+    proc = self._get_local_func(name, params)
+    if proc is not None:
+      error('Cannot redefeine procedure %s(%s)' % (name, ','.join(map(lambda x: x.type, params))))
+    if name not in self.procs:
       self.procs[name] = []
+
     proc = Proc(name, params, level, label, return_type)
     self.procs[name].append(proc)
     return proc
